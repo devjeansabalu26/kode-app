@@ -10,30 +10,48 @@ import com.kode.app.kode_app.R
 import com.kode.app.kode_app.model.Event
 
 class EventAdapter(
+
     private val events: List<Event>,
+
+    private val currentUserId: Long?,
+
     private val onEventClick: (Event) -> Unit
+
 ) : RecyclerView.Adapter<EventAdapter.EventViewHolder>() {
 
-    class EventViewHolder(view: View) :
-        RecyclerView.ViewHolder(view) {
+    class EventViewHolder(
+        view: View
+    ) : RecyclerView.ViewHolder(view) {
 
         val category: TextView =
-            view.findViewById(R.id.tvCategory)
+            view.findViewById(
+                R.id.tvCategory
+            )
 
         val title: TextView =
-            view.findViewById(R.id.tvTitle)
+            view.findViewById(
+                R.id.tvTitle
+            )
 
         val description: TextView =
-            view.findViewById(R.id.tvDescription)
+            view.findViewById(
+                R.id.tvDescription
+            )
 
         val date: TextView =
-            view.findViewById(R.id.tvDate)
+            view.findViewById(
+                R.id.tvDate
+            )
 
         val location: TextView =
-            view.findViewById(R.id.tvLocation)
+            view.findViewById(
+                R.id.tvLocation
+            )
 
         val button: Button =
-            view.findViewById(R.id.btnViewEvent)
+            view.findViewById(
+                R.id.btnViewEvent
+            )
     }
 
     override fun onCreateViewHolder(
@@ -41,15 +59,18 @@ class EventAdapter(
         viewType: Int
     ): EventViewHolder {
 
-        val view = LayoutInflater
-            .from(parent.context)
-            .inflate(
-                R.layout.item_event,
-                parent,
-                false
-            )
+        val view =
+            LayoutInflater
+                .from(parent.context)
+                .inflate(
+                    R.layout.item_event,
+                    parent,
+                    false
+                )
 
-        return EventViewHolder(view)
+        return EventViewHolder(
+            view
+        )
     }
 
     override fun onBindViewHolder(
@@ -57,20 +78,49 @@ class EventAdapter(
         position: Int
     ) {
 
-        val event = events[position]
+        val event =
+            events[position]
 
-        holder.category.text = event.category
-        holder.title.text = event.title
-        holder.description.text = event.description
-        holder.date.text = event.date
-        holder.location.text = event.location
+        holder.category.text =
+            event.category
+
+        holder.title.text =
+            event.title
+
+        holder.description.text =
+            event.description
+
+        holder.date.text =
+            event.date
+
+        holder.location.text =
+            event.location
+
+        val isCreator =
+            currentUserId != null &&
+                    event.creatorId == currentUserId
+
+        if (isCreator) {
+
+            holder.button.text =
+                "Gestionar"
+
+        } else {
+
+            holder.button.text =
+                "Ver evento"
+        }
 
         holder.button.setOnClickListener {
-            onEventClick(event)
+
+            onEventClick(
+                event
+            )
         }
     }
 
     override fun getItemCount(): Int {
+
         return events.size
     }
 }

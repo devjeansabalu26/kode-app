@@ -8,6 +8,8 @@ import com.kode.app.kode_app.ui.events.EventFormFragment
 import com.kode.app.kode_app.ui.events.MyEventsFragment
 import com.kode.app.kode_app.ui.home.HomeFragment
 import com.kode.app.kode_app.ui.profile.ProfileFragment
+import com.kode.app.kode_app.core.SessionManager
+import com.kode.app.kode_app.ui.auth.LoginFragment
 
 class MainActivity : AppCompatActivity() {
 
@@ -34,7 +36,25 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 R.id.nav_create_event -> {
-                    openFragment(EventFormFragment())
+
+                    val session =
+                        SessionManager(this)
+
+                    if (session.isLoggedIn()) {
+
+                        openFragment(
+                            EventFormFragment()
+                        )
+
+                    } else {
+
+                        openFragment(
+                            LoginFragment.newInstance(
+                                destination = "CREATE_EVENT"
+                            )
+                        )
+                    }
+
                     true
                 }
 

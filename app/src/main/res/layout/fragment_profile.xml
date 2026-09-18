@@ -1,16 +1,86 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<FrameLayout
+<ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fillViewport="true">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="Mi perfil"
-        android:textSize="24sp"
-        android:textStyle="bold" />
+        android:orientation="vertical"
+        android:padding="24dp">
 
-</FrameLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Mi perfil"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_marginTop="20dp" />
+
+        <TextView
+            android:id="@+id/tvProfileName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nombre"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginTop="32dp" />
+
+        <TextView
+            android:id="@+id/tvProfileEmail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="correo@gmail.com"
+            android:textSize="16sp"
+            android:layout_marginTop="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Información personal"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="32dp" />
+
+        <TextView
+            android:id="@+id/tvProfileDni"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="DNI: -"
+            android:layout_marginTop="16dp" />
+
+        <TextView
+            android:id="@+id/tvProfilePhone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Celular: -"
+            android:layout_marginTop="12dp" />
+
+        <TextView
+            android:id="@+id/tvProfileGender"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Género: -"
+            android:layout_marginTop="12dp" />
+
+        <TextView
+            android:id="@+id/tvProfileAge"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Edad: -"
+            android:layout_marginTop="12dp" />
+
+        <Button
+            android:id="@+id/btnLogout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cerrar sesión"
+            android:layout_marginTop="40dp"
+            android:layout_marginBottom="30dp" />
+
+    </LinearLayout>
+
+</ScrollView>

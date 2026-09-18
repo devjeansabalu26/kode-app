@@ -3,7 +3,8 @@
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -11,43 +12,84 @@
         android:orientation="vertical"
         android:padding="24dp">
 
+        <!-- ========================================= -->
+        <!-- CATEGORÍA -->
+        <!-- ========================================= -->
+
         <TextView
             android:id="@+id/tvDetailCategory"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Tecnología"
+            android:textSize="14sp"
             android:textStyle="bold" />
+
+        <!-- ========================================= -->
+        <!-- TÍTULO -->
+        <!-- ========================================= -->
 
         <TextView
             android:id="@+id/tvDetailTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Título"
-            android:textSize="26sp"
+            android:text="Título del evento"
+            android:textSize="28sp"
             android:textStyle="bold"
             android:layout_marginTop="8dp" />
+
+        <!-- ========================================= -->
+        <!-- DESCRIPCIÓN -->
+        <!-- ========================================= -->
 
         <TextView
             android:id="@+id/tvDetailDescription"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Descripción"
-            android:layout_marginTop="16dp" />
+            android:text="Descripción del evento"
+            android:textSize="16sp"
+            android:layout_marginTop="18dp" />
+
+        <!-- ========================================= -->
+        <!-- FECHA -->
+        <!-- ========================================= -->
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Fecha y hora"
+            android:textStyle="bold"
+            android:layout_marginTop="28dp" />
 
         <TextView
             android:id="@+id/tvDetailDate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Fecha"
+            android:text="20 Sep 2026 · 18:00"
+            android:textSize="16sp"
+            android:layout_marginTop="6dp" />
+
+        <!-- ========================================= -->
+        <!-- UBICACIÓN -->
+        <!-- ========================================= -->
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ubicación"
             android:textStyle="bold"
-            android:layout_marginTop="24dp" />
+            android:layout_marginTop="22dp" />
 
         <TextView
             android:id="@+id/tvDetailLocation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Ubicación"
-            android:layout_marginTop="8dp" />
+            android:text="Centro de Convenciones, Lima"
+            android:textSize="16sp"
+            android:layout_marginTop="6dp" />
+
+        <!-- ========================================= -->
+        <!-- BOTÓN PARTICIPANTE -->
+        <!-- ========================================= -->
 
         <Button
             android:id="@+id/btnRegisterEvent"
@@ -55,6 +97,86 @@
             android:layout_height="wrap_content"
             android:text="Quiero asistir"
             android:layout_marginTop="32dp" />
+
+        <!-- ========================================= -->
+        <!-- SECCIÓN SOLO PARA EL CREADOR -->
+        <!-- ========================================= -->
+
+        <LinearLayout
+            android:id="@+id/creatorManagementSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="28dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Gestión del evento"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <!-- ===================================== -->
+            <!-- REGISTRADOS -->
+            <!-- ===================================== -->
+
+            <TextView
+                android:id="@+id/tvRegisteredProgress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Registrados: 0 / 100"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="24dp" />
+
+            <ProgressBar
+                android:id="@+id/progressRegistered"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:progress="0"
+                android:layout_marginTop="8dp" />
+
+            <!-- ===================================== -->
+            <!-- ASISTIERON -->
+            <!-- ===================================== -->
+
+            <TextView
+                android:id="@+id/tvAttendedProgress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Asistieron: 0 / 100"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="26dp" />
+
+            <ProgressBar
+                android:id="@+id/progressAttended"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:progress="0"
+                android:layout_marginTop="8dp" />
+
+            <!-- ===================================== -->
+            <!-- EDITAR -->
+            <!-- ===================================== -->
+
+            <Button
+                android:id="@+id/btnEditEvent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Editar evento"
+                android:layout_marginTop="28dp" />
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="30dp" />
 
     </LinearLayout>
 
