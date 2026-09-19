@@ -151,7 +151,7 @@ class EventFormFragment : Fragment() {
                 etDate
             )
         }
-
+//holaa
         etTime.setOnClickListener {
 
             showTimePicker(
