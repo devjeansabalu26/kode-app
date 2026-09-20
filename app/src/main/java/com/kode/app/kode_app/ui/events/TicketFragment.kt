@@ -5,9 +5,16 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.widget.ImageView
 import androidx.fragment.app.Fragment
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.core.SessionManager
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.MultiFormatWriter
+import org.w3c.dom.Text
+
 
 class TicketFragment :
     Fragment() {
@@ -68,7 +75,53 @@ class TicketFragment :
             R.id.tvTicketCode
         ).text =
             qrCode
+
+        val qrImage =
+            view.findViewById<ImageView>(
+                R.id.ivTicketQR
+            )
+
+        qrImage.setImageBitmap(
+            generateQRCode(
+                qrCode
+            )
+        )
     }
+
+    private fun generateQRCode(
+        text: String
+    ): Bitmap {
+        val size = 512
+
+        val bitMatrix =
+            MultiFormatWriter().encode(
+                text,
+                BarcodeFormat.QR_CODE,
+                size,
+                size
+            )
+        val bitmap =
+            Bitmap.createBitmap(
+                size,
+                size,
+                Bitmap.Config.RGB_565
+            )
+        for (x in 0 until size){
+            for (y in 0 until size){
+                bitmap.setPixel(
+                    x,
+                    y,
+                    if (bitMatrix[x, y]){
+                        Color.BLACK
+                    } else {
+                        Color.WHITE
+                    }
+                )
+            }
+        }
+        return bitmap
+    }
+
 
     companion object {
 
