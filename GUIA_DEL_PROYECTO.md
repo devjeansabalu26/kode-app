@@ -2,6 +2,8 @@
 
 Guía pensada para alguien que usa **Android Studio** y **Kotlin** por primera vez. Explica qué es cada parte del proyecto, qué hace el código y cómo se conectan las piezas.
 
+> ⚠️ **Actualización:** este documento se escribió cuando la app usaba **SQLite**. La app ya se migró a **Supabase** (Auth + PostgreSQL). Lo que cambió (base de datos, sesión, repositorios, corrutinas, `AppResult`, RLS) está explicado en [`docs/MIGRACION_SQLITE_A_SUPABASE.md`](docs/MIGRACION_SQLITE_A_SUPABASE.md). Las secciones 2, 3, 5, 8 y 9 (Android, navegación, ViewBinding y sintaxis de Kotlin) siguen vigentes; las secciones **4 (dependencias), 6 (capa de datos) y 7 (pantallas)** describen la versión SQLite anterior y se mantienen como referencia histórica.
+
 ---
 
 ## 1. ¿Qué es Kode App?

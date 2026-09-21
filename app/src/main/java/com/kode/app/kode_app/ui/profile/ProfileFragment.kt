@@ -4,20 +4,25 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.Fragment
-import com.kode.app.kode_app.R
-import com.kode.app.kode_app.databinding.FragmentProfileBinding
+import androidx.lifecycle.lifecycleScope
+import com.kode.app.kode_app.core.AppError
+import com.kode.app.kode_app.core.AppResult
 import com.kode.app.kode_app.core.SessionManager
-import com.kode.app.kode_app.data.UserRepository
+import com.kode.app.kode_app.data.repository.AuthRepository
+import com.kode.app.kode_app.databinding.FragmentProfileBinding
 import com.kode.app.kode_app.ui.auth.LoginFragment
+import com.kode.app.kode_app.ui.navigateTo
+import com.kode.app.kode_app.ui.showError
+import com.kode.app.kode_app.ui.showMessage
+import kotlinx.coroutines.launch
 
 class ProfileFragment : Fragment() {
     private var _binding: FragmentProfileBinding? = null
 
     private val binding get() = _binding!!
+
+    private val authRepository = AuthRepository()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentProfileBinding.inflate(inflater, container, false)
@@ -31,48 +36,38 @@ class ProfileFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val session = SessionManager(requireContext())
-        if (!session.isLoggedIn()) {
+        if (!SessionManager().isLoggedIn()) {
             openLogin()
             return
         }
-        val userId = session.getUserId()
-        if (userId <= 0) {
-            session.logout()
-            openLogin()
-            return
+        binding.btnLogout.setOnClickListener {
+            binding.btnLogout.isEnabled = false
+            viewLifecycleOwner.lifecycleScope.launch {
+                authRepository.logout()
+                showMessage("Sesión cerrada")
+                openLogin()
+            }
         }
-        val userRepository = UserRepository(requireContext())
-        val user = userRepository.getUserById(userId)
-        if (user == null) {
-            session.logout()
-            Toast.makeText(requireContext(), "La sesión ya no es válida", Toast.LENGTH_SHORT).show()
-            openLogin()
-            return
-        }
-        val tvName = binding.tvProfileName
-        val tvEmail = binding.tvProfileEmail
-        val tvDni = binding.tvProfileDni
-        val tvPhone = binding.tvProfilePhone
-        val tvGender = binding.tvProfileGender
-        val tvAge = binding.tvProfileAge
-        val btnLogout = binding.btnLogout
-        tvName.text = user.name
-        tvEmail.text = user.email
-        tvDni.text = "DNI: ${user.dni}"
-        tvPhone.text = "Celular: ${user.phone}"
-        tvGender.text = "Género: ${user.gender}"
-
-        tvAge.text =
-            "Edad: ${user.age}"
-        btnLogout.setOnClickListener {
-            session.logout()
-            Toast.makeText(requireContext(), "Sesión cerrada", Toast.LENGTH_SHORT).show()
-            openLogin()
+        viewLifecycleOwner.lifecycleScope.launch {
+            when (val result = authRepository.getCurrentProfile()) {
+                is AppResult.Success -> {
+                    val user = result.value
+                    binding.tvProfileName.text = user.name
+                    binding.tvProfileEmail.text = user.email
+                    binding.tvProfileDni.text = "DNI: ${user.dni}"
+                    binding.tvProfilePhone.text = "Celular: ${user.phone}"
+                    binding.tvProfileGender.text = "Género: ${user.gender}"
+                    binding.tvProfileAge.text = "Edad: ${user.age}"
+                }
+                is AppResult.Failure -> {
+                    showError(result.error)
+                    if (result.error == AppError.NOT_AUTHENTICATED) openLogin()
+                }
+            }
         }
     }
 
     private fun openLogin() {
-        parentFragmentManager.beginTransaction().replace(R.id.mainContainer, LoginFragment.newInstance(destination = "PROFILE")).commit()
+        navigateTo(LoginFragment.newInstance(destination = "PROFILE"))
     }
 }

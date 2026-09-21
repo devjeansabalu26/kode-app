@@ -3,13 +3,16 @@ package com.kode.app.kode_app
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.kode.app.kode_app.core.SessionManager
+import com.kode.app.kode_app.data.repository.AuthRepository
+import com.kode.app.kode_app.databinding.ActivityMainBinding
+import com.kode.app.kode_app.ui.auth.LoginFragment
 import com.kode.app.kode_app.ui.events.EventFormFragment
 import com.kode.app.kode_app.ui.events.MyEventsFragment
 import com.kode.app.kode_app.ui.home.HomeFragment
 import com.kode.app.kode_app.ui.profile.ProfileFragment
-import com.kode.app.kode_app.core.SessionManager
-import com.kode.app.kode_app.ui.auth.LoginFragment
-import com.kode.app.kode_app.databinding.ActivityMainBinding
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -29,8 +32,7 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_create_event -> {
-                    val session = SessionManager(this)
-                    if (session.isLoggedIn()) {
+                    if (SessionManager().isLoggedIn()) {
                         openFragment(EventFormFragment())
                     } else {
                         openFragment(LoginFragment.newInstance(destination = "CREATE_EVENT"))
@@ -45,7 +47,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
         if (savedInstanceState == null) {
-            binding.bottomNavigation.selectedItemId = R.id.nav_home
+            // Se espera a que el SDK de Supabase cargue la sesión guardada antes de mostrar Inicio.
+            lifecycleScope.launch {
+                AuthRepository().awaitReady()
+                binding.bottomNavigation.selectedItemId = R.id.nav_home
+            }
         }
     }
 

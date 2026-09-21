@@ -1,36 +1,18 @@
 package com.kode.app.kode_app.core
 
-import android.content.Context
+import com.kode.app.kode_app.data.remote.AuthRemoteDataSource
 
-class SessionManager(context: Context) {
-    private val preferences = context.getSharedPreferences("kode_session", Context.MODE_PRIVATE)
+/**
+ * Lectura rápida (sin red) de la sesión de Supabase Auth.
+ * La sesión y los tokens los guarda y renueva el SDK de Supabase; esta clase NO guarda nada en SharedPreferences.
+ */
+class SessionManager(private val auth: AuthRemoteDataSource = AuthRemoteDataSource()) {
+    fun isLoggedIn(): Boolean = auth.currentUserId() != null
 
-    fun createSession(userId: Long, name: String, email: String) {
-        preferences.edit().putBoolean("logged_in", true).putLong("user_id", userId).putString("name", name).putString("email", email).apply()
-    }
+    /** UUID del usuario con sesión, o null si no hay sesión. */
+    fun getUserId(): String? = auth.currentUserId()
 
-    fun isLoggedIn(): Boolean {
-        val loggedIn = preferences.getBoolean("logged_in", false)
-        val userId = preferences.getLong("user_id", -1L)
-        return loggedIn && userId > 0
-    }
+    fun getName(): String = auth.currentName().orEmpty()
 
-    fun getUserId(): Long {
-        return preferences.getLong("user_id", -1L)
-    }
-
-    fun getName(): String {
-        return preferences.getString(
-            "name",
-            ""
-        ) ?: ""
-    }
-
-    fun getEmail(): String {
-        return preferences.getString("email", "") ?: ""
-    }
-
-    fun logout() {
-        preferences.edit().clear().apply()
-    }
+    fun getEmail(): String = auth.currentEmail().orEmpty()
 }
