@@ -7,158 +7,76 @@ import com.kode.app.kode_app.data.AppDatabaseHelper.Companion.TABLE_EVENTS
 import com.kode.app.kode_app.data.AppDatabaseHelper.Companion.TABLE_REGISTRATIONS
 import com.kode.app.kode_app.model.Event
 
-class EventRepository(
-    context: Context
-) {
+class EventRepository(context: Context) {
+    private val helper = AppDatabaseHelper.getInstance(context)
 
-    private val helper =
-        AppDatabaseHelper.getInstance(
-            context
-        )
-
-    private val users =
-        UserRepository(
-            context
-        )
+    private val users = UserRepository(context)
 
     fun getEvents(): List<Event> {
-
         return queryEvents()
     }
 
-    fun getEventById(
-        eventId: Int
-    ): Event? {
-
-        return queryEvents(
-            where = "e.id = ?",
-            args = arrayOf(
-                eventId.toString()
-            )
-        ).firstOrNull()
+    fun getEventById(eventId: Int): Event? {
+        return queryEvents(where = "e.id = ?", args = arrayOf(eventId.toString())).firstOrNull()
     }
 
-    fun getEventsByCategory(
-        category: String
-    ): List<Event> {
-
-        return queryEvents(
-            where = "e.category = ?",
-            args = arrayOf(
-                category
-            )
-        )
+    fun getEventsByCategory(category: String): List<Event> {
+        return queryEvents(where = "e.category = ?", args = arrayOf(category))
     }
 
-    fun getEventsCreatedByUser(
-        userId: Long
-    ): List<Event> {
-
-        return queryEvents(
-            where = "e.creator_id = ?",
-            args = arrayOf(
-                userId.toString()
-            )
-        )
+    fun getEventsCreatedByUser(userId: Long): List<Event> {
+        return queryEvents(where = "e.creator_id = ?", args = arrayOf(userId.toString()))
     }
 
-    fun getEventsRegisteredByUser(
-        userId: Long
-    ): List<Event> {
-
-        return queryEvents(
-            where = """
+    fun getEventsRegisteredByUser(userId: Long): List<Event> {
+        return queryEvents(where = """
                 e.id IN (
                     SELECT event_id
                     FROM $TABLE_REGISTRATIONS
                     WHERE user_id = ?
                 )
-            """.trimIndent(),
-            args = arrayOf(
-                userId.toString()
-            )
-        )
+            """.trimIndent(), args = arrayOf(userId.toString()))
     }
 
     fun getCategories(): List<String> {
-
-        val categories =
-            mutableListOf<String>()
-
-        helper
-            .readableDatabase
-            .rawQuery(
-                """
+        val categories = mutableListOf<String>()
+        helper.readableDatabase.rawQuery("""
                 SELECT DISTINCT category
                 FROM $TABLE_EVENTS
                 WHERE status = 'PUBLISHED'
                 AND category IS NOT NULL
                 AND TRIM(category) <> ''
                 ORDER BY category ASC
-                """.trimIndent(),
-                null
-            )
-            .use {
-
+                """.trimIndent(), null).use {
                 while (it.moveToNext()) {
-
-                    categories.add(
-                        it.getString(0)
-                    )
+                    categories.add(it.getString(0))
                 }
             }
-
         return categories
     }
 
-    fun eventExists(
-        eventId: Int
-    ): Boolean {
-
-        helper
-            .readableDatabase
-            .rawQuery(
-                """
+    fun eventExists(eventId: Int): Boolean {
+        helper.readableDatabase.rawQuery("""
                 SELECT id
                 FROM $TABLE_EVENTS
                 WHERE id = ?
                 LIMIT 1
-                """.trimIndent(),
-                arrayOf(
-                    eventId.toString()
-                )
-            )
-            .use {
-
+                """.trimIndent(), arrayOf(eventId.toString())).use {
                 return it.moveToFirst()
             }
     }
 
-    fun createEvent(
-        creatorId: Long,
-        title: String,
-        description: String,
-        date: String,
-        location: String,
-        category: String,
-        capacity: Int
-    ): Long {
-
+    fun createEvent(creatorId: Long, title: String, description: String, date: String, location: String, category: String, capacity: Int): Long {
         if (creatorId <= 0) {
             return -1L
         }
-
         if (users.getUserById(creatorId) == null) {
             return -1L
         }
-
-        val values =
-            ContentValues().apply {
-
+        val values = ContentValues().apply {
                 put("creator_id", creatorId)
                 put("title", title.trim())
                 put("description", description.trim())
-
                 put("date", date)
                 put("location", location.trim())
                 put("category", category.trim())
@@ -166,14 +84,7 @@ class EventRepository(
                 put("status", "PUBLISHED")
                 put("created_at", currentDateTime())
             }
-
-        return helper
-            .writableDatabase
-            .insert(
-                TABLE_EVENTS,
-                null,
-                values
-            )
+        return helper.writableDatabase.insert(TABLE_EVENTS, null, values)
     }
 
     fun updateEvent(
@@ -186,23 +97,14 @@ class EventRepository(
         category: String,
         capacity: Int
     ): Boolean {
-
-        val event =
-            getEventById(
-                eventId
-            ) ?: return false
-
+        val event = getEventById(eventId) ?: return false
         if (event.creatorId != creatorId) {
             return false
         }
-
         if (capacity < event.registeredCount) {
             return false
         }
-
-        val values =
-            ContentValues().apply {
-
+        val values = ContentValues().apply {
                 put("title", title.trim())
                 put("description", description.trim())
                 put("date", date)
@@ -210,42 +112,19 @@ class EventRepository(
                 put("category", category.trim())
                 put("capacity", capacity)
             }
-
-        val rows =
-            helper
-                .writableDatabase
-                .update(
-                    TABLE_EVENTS,
-                    values,
-                    "id = ? AND creator_id = ?",
-                    arrayOf(
-                        eventId.toString(),
-                        creatorId.toString()
-                    )
-                )
-
+        val rows = helper.writableDatabase
+                .update(TABLE_EVENTS, values, "id = ? AND creator_id = ?", arrayOf(eventId.toString(), creatorId.toString()))
         return rows > 0
     }
 
-    private fun queryEvents(
-        where: String? = null,
-        args: Array<String>? = null
-    ): List<Event> {
-
-        val events =
-            mutableListOf<Event>()
-
-        val extraFilter =
-            if (where != null) {
+    private fun queryEvents(where: String? = null, args: Array<String>? = null): List<Event> {
+        val events = mutableListOf<Event>()
+        val extraFilter = if (where != null) {
                 "AND ($where)"
             } else {
                 ""
             }
-
-        helper
-            .readableDatabase
-            .rawQuery(
-                """
+        helper.readableDatabase.rawQuery("""
                 SELECT
                     e.id,
                     e.creator_id,
@@ -275,41 +154,23 @@ class EventRepository(
                 $extraFilter
 
                 ORDER BY e.date ASC
-                """.trimIndent(),
-                args
-            )
-            .use {
-
+                """.trimIndent(), args).use {
                 while (it.moveToNext()) {
-
-                    events.add(
-                        readEvent(it)
-                    )
+                    events.add(readEvent(it))
                 }
             }
-
         return events
     }
 
-    private fun readEvent(
-        cursor: Cursor
-    ): Event {
-
-        val creatorIndex =
-            cursor.getColumnIndexOrThrow(
-                "creator_id"
-            )
-
+    private fun readEvent(cursor: Cursor): Event {
+        val creatorIndex = cursor.getColumnIndexOrThrow("creator_id")
         return Event(
             id = cursor.getInt(cursor.getColumnIndexOrThrow("id")),
-
-            creatorId =
-                if (cursor.isNull(creatorIndex)) {
+            creatorId = if (cursor.isNull(creatorIndex)) {
                     null
                 } else {
                     cursor.getLong(creatorIndex)
                 },
-
             title = cursor.getString(cursor.getColumnIndexOrThrow("title")),
             description = cursor.getString(cursor.getColumnIndexOrThrow("description")),
             date = cursor.getString(cursor.getColumnIndexOrThrow("date")),

@@ -8,70 +8,31 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class AppDatabaseHelper private constructor(
-    context: Context
-) : SQLiteOpenHelper(
-    context,
-    DATABASE_NAME,
-    null,
-    DATABASE_VERSION
-) {
-
+class AppDatabaseHelper private constructor(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     companion object {
-
-        private const val DATABASE_NAME =
-            "kode.db"
-
-        private const val DATABASE_VERSION =
-            2
-
-        const val TABLE_USERS =
-            "users"
-
-        const val TABLE_EVENTS =
-            "events"
-
-        const val TABLE_REGISTRATIONS =
-            "registrations"
-
+        private const val DATABASE_NAME = "kode.db"
+        private const val DATABASE_VERSION = 2
+        const val TABLE_USERS = "users"
+        const val TABLE_EVENTS = "events"
+        const val TABLE_REGISTRATIONS = "registrations"
         @Volatile
-        private var instance:
-                AppDatabaseHelper? = null
-
-        fun getInstance(
-            context: Context
-        ): AppDatabaseHelper {
-
-            return instance
-                ?: synchronized(this) {
-
-                    instance
-                        ?: AppDatabaseHelper(
-                            context.applicationContext
-                        ).also {
+        private var instance: AppDatabaseHelper? = null
+        fun getInstance(context: Context): AppDatabaseHelper {
+            return instance ?: synchronized(this) {
+                    instance ?: AppDatabaseHelper(context.applicationContext).also {
                             instance = it
                         }
                 }
         }
     }
 
-    override fun onConfigure(
-        db: SQLiteDatabase
-    ) {
-
+    override fun onConfigure(db: SQLiteDatabase) {
         super.onConfigure(db)
-
-        db.setForeignKeyConstraintsEnabled(
-            true
-        )
+        db.setForeignKeyConstraintsEnabled(true)
     }
 
-    override fun onCreate(
-        db: SQLiteDatabase
-    ) {
-
-        db.execSQL(
-            """
+    override fun onCreate(db: SQLiteDatabase) {
+        db.execSQL("""
             CREATE TABLE $TABLE_USERS (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -83,11 +44,8 @@ class AppDatabaseHelper private constructor(
                 password_hash TEXT NOT NULL,
                 created_at TEXT NOT NULL
             )
-            """.trimIndent()
-        )
-
-        db.execSQL(
-            """
+            """.trimIndent())
+        db.execSQL("""
             CREATE TABLE $TABLE_EVENTS (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 creator_id INTEGER,
@@ -103,11 +61,8 @@ class AppDatabaseHelper private constructor(
                 FOREIGN KEY (creator_id)
                 REFERENCES $TABLE_USERS(id)
             )
-            """.trimIndent()
-        )
-
-        db.execSQL(
-            """
+            """.trimIndent())
+        db.execSQL("""
             CREATE TABLE $TABLE_REGISTRATIONS (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 event_id INTEGER NOT NULL,
@@ -125,37 +80,18 @@ class AppDatabaseHelper private constructor(
                 FOREIGN KEY (user_id)
                 REFERENCES $TABLE_USERS(id)
             )
-            """.trimIndent()
-        )
-
+            """.trimIndent())
         insertInitialEvents(db)
     }
 
-    override fun onUpgrade(
-        db: SQLiteDatabase,
-        oldVersion: Int,
-        newVersion: Int
-    ) {
-
-        db.execSQL(
-            "DROP TABLE IF EXISTS $TABLE_REGISTRATIONS"
-        )
-
-        db.execSQL(
-            "DROP TABLE IF EXISTS $TABLE_EVENTS"
-        )
-
-        db.execSQL(
-            "DROP TABLE IF EXISTS $TABLE_USERS"
-        )
-
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_REGISTRATIONS")
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_EVENTS")
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_USERS")
         onCreate(db)
     }
 
-    private fun insertInitialEvents(
-        db: SQLiteDatabase
-    ) {
-
+    private fun insertInitialEvents(db: SQLiteDatabase) {
         insertEventSeed(
             db,
             "Conferencia de Tecnología & IA 2026",
@@ -165,7 +101,6 @@ class AppDatabaseHelper private constructor(
             "Tecnología",
             400
         )
-
         insertEventSeed(
             db,
             "Festival de Diseño y Arquitectura",
@@ -175,7 +110,6 @@ class AppDatabaseHelper private constructor(
             "Diseño",
             200
         )
-
         insertEventSeed(
             db,
             "Summit Fundadores & Startups",
@@ -196,10 +130,7 @@ class AppDatabaseHelper private constructor(
         category: String,
         capacity: Int
     ) {
-
-        val values =
-            ContentValues().apply {
-
+        val values = ContentValues().apply {
                 putNull("creator_id")
                 put("title", title)
                 put("description", description)
@@ -210,21 +141,10 @@ class AppDatabaseHelper private constructor(
                 put("status", "PUBLISHED")
                 put("created_at", currentDateTime())
             }
-
-        db.insert(
-            TABLE_EVENTS,
-            null,
-            values
-        )
+        db.insert(TABLE_EVENTS, null, values)
     }
 }
 
 internal fun currentDateTime(): String {
-
-    return SimpleDateFormat(
-        "yyyy-MM-dd HH:mm:ss",
-        Locale.getDefault()
-    ).format(
-        Date()
-    )
+    return SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
 }
