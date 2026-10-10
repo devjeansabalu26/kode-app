@@ -7,40 +7,59 @@ import com.kode.app.kode_app.databinding.ItemEventBinding
 import com.kode.app.kode_app.model.Event
 
 class EventAdapter(
-
     private val events: List<Event>,
-
     private val currentUserId: Long?,
-
     private val onEventClick: (Event) -> Unit
-
 ) : RecyclerView.Adapter<EventAdapter.EventViewHolder>() {
-    class EventViewHolder(val binding: ItemEventBinding) : RecyclerView.ViewHolder(binding.root)
+
+    inner class EventViewHolder(val binding: ItemEventBinding) :
+        RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EventViewHolder {
-        val binding = ItemEventBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        val binding = ItemEventBinding.inflate(
+            LayoutInflater.from(parent.context),
+            parent,
+            false
+        )
         return EventViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: EventViewHolder, position: Int) {
         val event = events[position]
-        holder.binding.tvCategory.text = event.category
-        holder.binding.tvTitle.text = event.title
-        holder.binding.tvDescription.text = event.description
-        holder.binding.tvDate.text = event.date
-        holder.binding.tvLocation.text = event.location
+
+
+        holder.binding.tvCategoryBadge.text = "• ${event.category}"
+        holder.binding.tvEventTitle.text = event.title
+        holder.binding.tvEventDescription.text = event.description
+        holder.binding.tvEventDate.text = " ${event.date}"
+        holder.binding.tvEventLocation.text = "${event.location}"
+
+
+        val remainingSeats = (event.capacity - event.registeredCount).coerceAtLeast(0)
+        if (remainingSeats > 0) {
+            holder.binding.tvCapacityBadge.text = "Quedan $remainingSeats cupos"
+        } else {
+            holder.binding.tvCapacityBadge.text = "Agotado"
+        }
+
+
+        if (event.isPrivate) {
+            holder.binding.tvAccessType.text = "Privado (Con clave)"
+        } else {
+            holder.binding.tvAccessType.text = "Pase Libre"
+        }
+
+
         val isCreator = currentUserId != null && event.creatorId == currentUserId
         if (isCreator) {
-            holder.binding.btnViewEvent.text = "Gestionar"
+            holder.binding.btnVerEvento.text = "Gestionar"
         } else {
-            holder.binding.btnViewEvent.text = "Ver evento"
+            holder.binding.btnVerEvento.text = "Ver evento ➔"
         }
-        holder.binding.btnViewEvent.setOnClickListener {
-            onEventClick(event)
-        }
+
+        holder.binding.btnVerEvento.setOnClickListener { onEventClick(event) }
+        holder.itemView.setOnClickListener { onEventClick(event) }
     }
 
-    override fun getItemCount(): Int {
-        return events.size
-    }
+    override fun getItemCount(): Int = events.size
 }

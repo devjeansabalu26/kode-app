@@ -1,34 +1,43 @@
 package com.kode.app.kode_app.ui.events
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.kode.app.kode_app.R
-import com.kode.app.kode_app.databinding.FragmentEventDetailBinding
 import com.kode.app.kode_app.core.SessionManager
 import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.data.RegistrationRepository
+import com.kode.app.kode_app.databinding.FragmentEventDetailBinding
+import com.kode.app.kode_app.model.AttendeeItem
 import com.kode.app.kode_app.model.Event
-import com.kode.app.kode_app.ui.auth.LoginFragment
+import com.kode.app.kode_app.ui.checkin.QrScannerFragment
+import com.kode.app.kode_app.ui.events.AttendeeAdapter
+import com.kode.app.kode_app.ui.events.TicketFragment
 
 class EventDetailFragment : Fragment() {
-    private var _binding: FragmentEventDetailBinding? = null
 
+    private var _binding: FragmentEventDetailBinding? = null
     private val binding get() = _binding!!
 
     private lateinit var eventRepository: EventRepository
-
     private lateinit var registrationRepository: RegistrationRepository
     private lateinit var session: SessionManager
+    private lateinit var attendeeAdapter: AttendeeAdapter
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    private var fullAttendeeList: List<AttendeeItem> = emptyList()
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentEventDetailBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -40,152 +49,169 @@ class EventDetailFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         eventRepository = EventRepository(requireContext())
         registrationRepository = RegistrationRepository(requireContext())
         session = SessionManager(requireContext())
+
         val eventId = arguments?.getInt(ARG_ID, -1) ?: -1
         if (eventId <= 0) {
             showMessage("No se pudo identificar el evento")
             return
         }
+
         val event = eventRepository.getEventById(eventId)
         if (event == null) {
             showMessage("El evento no existe")
             return
         }
-        val tvCategory = binding.tvDetailCategory
-        val tvTitle = binding.tvDetailTitle
-        val tvDescription = binding.tvDetailDescription
-        val tvDate = binding.tvDetailDate
-        val tvLocation = binding.tvDetailLocation
-        val btnRegister = binding.btnRegisterEvent
-        val creatorSection = binding.creatorManagementSection
-        val tvRegistered = binding.tvRegisteredProgress
-        val progressRegistered = binding.progressRegistered
-        val tvAttended = binding.tvAttendedProgress
-        val progressAttended = binding.progressAttended
-        val btnEdit = binding.btnEditEvent
-        tvCategory.text = event.category
-        tvTitle.text = event.title
-        tvDescription.text = event.description
-        tvDate.text = event.date
-        tvLocation.text = event.location
-        val currentUserId = if (session.isLoggedIn()) {
-                session.getUserId()
-            } else {
-                -1L
-            }
+
+        val currentUserId = if (session.isLoggedIn()) session.getUserId() else -1L
         val isCreator = currentUserId > 0 && event.creatorId != null && event.creatorId == currentUserId
+
         if (isCreator) {
-            showCreatorMode(
-                event = event,
-                btnRegister = btnRegister,
-                creatorSection = creatorSection,
-                tvRegistered = tvRegistered,
-                progressRegistered = progressRegistered,
-                tvAttended = tvAttended,
-                progressAttended = progressAttended,
-                btnEdit = btnEdit
-            )
+            binding.containerPublicDetail.isVisible = false
+            binding.bottomActionContainer.isVisible = false
+            binding.containerOrganizerPortal.isVisible = true
+
+            setupCreatorDashboard(event)
         } else {
-            showParticipantMode(event = event, btnRegister = btnRegister, creatorSection = creatorSection)
+            binding.containerPublicDetail.isVisible = true
+            binding.bottomActionContainer.isVisible = true
+            binding.containerOrganizerPortal.isVisible = false
+
+            setupParticipantView(event)
         }
     }
 
-    private fun showCreatorMode(
-        event: Event,
-        btnRegister: Button,
-        creatorSection: LinearLayout,
-        tvRegistered: TextView,
-        progressRegistered: ProgressBar,
-        tvAttended: TextView,
-        progressAttended: ProgressBar,
-        btnEdit: Button
-    ) {
-        btnRegister.visibility = View.GONE
-        creatorSection.visibility = View.VISIBLE
-        tvRegistered.text = "Registrados: ${event.registeredCount} / ${event.capacity}"
-        val registeredPercent = calculatePercentage(value = event.registeredCount, maximum = event.capacity)
-        progressRegistered.max = 100
-        progressRegistered.progress = registeredPercent
-        tvAttended.text = "Asistieron: ${event.attendedCount} / ${event.capacity}"
-        val attendedPercent = calculatePercentage(value = event.attendedCount, maximum = event.capacity)
-        progressAttended.max = 100
-        progressAttended.progress = attendedPercent
-        btnEdit.setOnClickListener {
-            parentFragmentManager.beginTransaction().replace(R.id.mainContainer, EventFormFragment.newEditInstance(event.id)).addToBackStack(null)
+    private fun setupParticipantView(event: Event) {
+        binding.tvCategoryLabel.text = event.category.uppercase()
+        binding.tvDetailTitle.text = event.title
+        binding.tvDetailDescription.text = event.description
+        binding.tvDetailDate.text = " ${event.date}"
+        binding.tvDetailLocation.text = "${event.location}"
+
+        val endTimeText = if (!event.endTime.isNullOrEmpty()) " - ${event.endTime}" else ""
+        binding.tvDetailTime.text = "Horario: ${event.date}$endTimeText"
+        binding.tvEventTypeBadge.text = " Modalidad: ${event.eventType ?: "Presencial"}"
+
+        if (!event.accessCode.isNullOrEmpty()) {
+            binding.tvCodeBadge.text = "CÓDIGO: ${event.accessCode}"
+            binding.tvCodeBadge.isVisible = true
+        } else {
+            binding.tvCodeBadge.isVisible = false
+        }
+
+        val registered = event.registeredCount
+        val capacity = event.capacity
+        val remaining = (capacity - registered).coerceAtLeast(0)
+        val capacityPercent = calculatePercentage(registered, capacity)
+
+        binding.tvRegisteredCount.text = " $registered / $capacity Registrados"
+        binding.tvRemainingSeats.text = "$remaining cupos restantes"
+        binding.tvCapacityPercent.text = "$capacityPercent% ocupado"
+        binding.pbCapacity.progress = capacityPercent
+
+        binding.tvReqDni.isVisible = event.requireDni
+        binding.tvReqPass.text = if (event.isUntransferable) {
+            "Pase Personal e Intransferible con QR"
+        } else {
+            "Pase digital con código QR alfanumérico"
+        }
+
+        binding.btnRegister.setOnClickListener {
+            val session = SessionManager(requireContext())
+            if (!session.isLoggedIn()) {
+                Toast.makeText(requireContext(), "Debes iniciar sesión para preinscribirte", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.mainContainer, TicketFragment.newInstance(eventId = event.id, eventTitle = event.title))
+                .addToBackStack(null)
                 .commit()
         }
     }
 
-    private fun showParticipantMode(event: Event, btnRegister: Button, creatorSection: LinearLayout) {
-        creatorSection.visibility = View.GONE
-        btnRegister.visibility = View.VISIBLE
-        if (event.registeredCount >= event.capacity) {
-            btnRegister.text = "Aforo completo"
-            btnRegister.isEnabled = false
-            return
+    private fun setupCreatorDashboard(event: Event) {
+        binding.tvEventSubtitle.text = " ${event.title} · ${event.date}"
+
+        updateDashboardMetrics(event)
+
+        attendeeAdapter = AttendeeAdapter(emptyList()) { attendee, newStatus ->
+            registrationRepository.updateAttendanceStatus(event.id, attendee.user.id, newStatus)
+
+            eventRepository.getEventById(event.id)?.let { updatedEvent ->
+                updateDashboardMetrics(updatedEvent)
+            }
         }
-        if (session.isLoggedIn() && registrationRepository.isUserRegisteredInEvent(eventId = event.id, userId = session.getUserId())) {
-            btnRegister.text = "Ver mi pase"
+
+        binding.rvAttendees.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = attendeeAdapter
+        }
+
+        loadAttendees(event.id)
+
+        binding.etSearchAttendee.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                filterAttendees(s.toString())
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        binding.btnQuickScanBanner.setOnClickListener { openQrScanner(event.id) }
+        binding.btnOpenScanner.setOnClickListener { openQrScanner(event.id) }
+    }
+
+    private fun loadAttendees(eventId: Int) {
+        fullAttendeeList = registrationRepository.getAttendeesForEvent(eventId)
+        attendeeAdapter.updateData(fullAttendeeList)
+    }
+
+    private fun filterAttendees(query: String) {
+        val filtered = if (query.isBlank()) {
+            fullAttendeeList
         } else {
-            btnRegister.text = "Quiero asistir"
+            fullAttendeeList.filter {
+                it.user.name.contains(query, ignoreCase = true) ||
+                        it.ticketCode.contains(query, ignoreCase = true)
+            }
         }
-        btnRegister.isEnabled = true
-        btnRegister.setOnClickListener {
-            registerOrLogin(event)
-        }
+        attendeeAdapter.updateData(filtered)
     }
 
-    private fun registerOrLogin(event: Event) {
-        if (!session.isLoggedIn()) {
-            openLogin(event)
-            return
-        }
-        val userId = session.getUserId()
-        if (userId <= 0) {
-            session.logout()
-            showMessage("Tu sesión no es válida. Inicia sesión nuevamente.")
-            openLogin(event)
-            return
-        }
-        if (event.creatorId == userId) {
-            showMessage("Eres el creador de este evento")
-            return
-        }
-        val updatedEvent = eventRepository.getEventById(event.id)
-        if (updatedEvent == null) {
-            showMessage("El evento ya no está disponible")
-            return
-        }
-        if (updatedEvent.registeredCount >= updatedEvent.capacity) {
-            showMessage("El evento alcanzó su capacidad máxima")
-            return
-        }
-        val qrCode = registrationRepository.registerUserInEvent(eventId = event.id, userId = userId)
-        if (qrCode == null) {
-            showMessage("No se pudo realizar la inscripción")
-            return
-        }
-        openTicket(eventId = event.id, eventTitle = event.title, qrCode = qrCode)
+    private fun updateDashboardMetrics(event: Event) {
+        binding.tvStatTotal.text = event.capacity.toString()
+        binding.tvStatAttended.text = event.attendedCount.toString()
+
+        val pendingCount = (event.registeredCount - event.attendedCount).coerceAtLeast(0)
+        binding.tvStatPending.text = pendingCount.toString()
+
+        val absentCount = (event.capacity - event.registeredCount).coerceAtLeast(0)
+        binding.tvStatAbsent.text = absentCount.toString()
+
+        binding.tvStatAttendedPercent.text = "${calculatePercentage(event.attendedCount, event.capacity)}%"
+        binding.tvStatPendingPercent.text = "${calculatePercentage(pendingCount, event.capacity)}%"
+        binding.tvStatAbsentPercent.text = "${calculatePercentage(absentCount, event.capacity)}%"
     }
 
-    private fun openLogin(event: Event) {
+    private fun openQrScanner(eventId: Int) {
+        val qrFragment = QrScannerFragment().apply {
+            arguments = Bundle().apply {
+                putInt("EVENT_ID", eventId)
+            }
+        }
+
         parentFragmentManager.beginTransaction()
-            .replace(R.id.mainContainer, LoginFragment.newInstance(destination = "REGISTER_EVENT", eventId = event.id, eventTitle = event.title))
-            .addToBackStack(null).commit()
-    }
-
-    private fun openTicket(eventId: Int, eventTitle: String, qrCode: String) {
-        parentFragmentManager.beginTransaction()
-            .replace(R.id.mainContainer, TicketFragment.newInstance(eventId = eventId, eventTitle = eventTitle, qrCode = qrCode))
-            .addToBackStack(null).commit()
+            .replace(R.id.mainContainer, qrFragment)
+            .addToBackStack(null)
+            .commit()
     }
 
     private fun calculatePercentage(value: Int, maximum: Int): Int {
-        if (maximum <= 0) {
-            return 0
-        }
+        if (maximum <= 0) return 0
         return (value * 100 / maximum).coerceIn(0, 100)
     }
 
@@ -196,39 +222,14 @@ class EventDetailFragment : Fragment() {
     companion object {
         private const val ARG_ID = "id"
         private const val ARG_TITLE = "title"
-        private const val ARG_DESCRIPTION = "description"
-        private const val ARG_DATE = "date"
-        private const val ARG_LOCATION = "location"
-        private const val ARG_CATEGORY = "category"
-        private const val ARG_CREATOR_ID = "creator_id"
-        private const val ARG_CAPACITY = "capacity"
-        private const val ARG_REGISTERED = "registered_count"
-        private const val ARG_ATTENDED = "attended_count"
-        private const val ARG_EVENT_ID = "event_id"
-        fun newEditInstance(eventId: Int): EventFormFragment {
-            return EventFormFragment().apply {
-                    arguments = Bundle().apply {
-                            putInt(ARG_EVENT_ID, eventId)
-                        }
-                }
-        }
+
         fun newInstance(event: Event): EventDetailFragment {
             return EventDetailFragment().apply {
-                    arguments = Bundle().apply {
-                            putInt(ARG_ID, event.id)
-                            putString(ARG_TITLE, event.title)
-                            putString(ARG_DESCRIPTION, event.description)
-                            putString(ARG_DATE, event.date)
-                            putString(ARG_LOCATION, event.location)
-                            putString(ARG_CATEGORY, event.category)
-                            event.creatorId?.let {
-                                putLong(ARG_CREATOR_ID, it)
-                            }
-                            putInt(ARG_CAPACITY, event.capacity)
-                            putInt(ARG_REGISTERED, event.registeredCount)
-                            putInt(ARG_ATTENDED, event.attendedCount)
-                        }
+                arguments = Bundle().apply {
+                    putInt(ARG_ID, event.id)
+                    putString(ARG_TITLE, event.title)
                 }
+            }
         }
     }
 }

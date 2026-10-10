@@ -3,13 +3,14 @@ package com.kode.app.kode_app
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+import com.kode.app.kode_app.core.SessionManager
+import com.kode.app.kode_app.databinding.ActivityMainBinding
+import com.kode.app.kode_app.ui.auth.LoginFragment
 import com.kode.app.kode_app.ui.events.EventFormFragment
 import com.kode.app.kode_app.ui.events.MyEventsFragment
 import com.kode.app.kode_app.ui.home.HomeFragment
 import com.kode.app.kode_app.ui.profile.ProfileFragment
-import com.kode.app.kode_app.core.SessionManager
-import com.kode.app.kode_app.ui.auth.LoginFragment
-import com.kode.app.kode_app.databinding.ActivityMainBinding
+
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -18,6 +19,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_home -> {
@@ -44,12 +46,15 @@ class MainActivity : AppCompatActivity() {
                 else -> false
             }
         }
+
         if (savedInstanceState == null) {
             binding.bottomNavigation.selectedItemId = R.id.nav_home
         }
     }
 
     private fun openFragment(fragment: Fragment) {
-        supportFragmentManager.beginTransaction().replace(R.id.mainContainer, fragment).commit()
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.mainContainer, fragment)
+            .commit()
     }
 }

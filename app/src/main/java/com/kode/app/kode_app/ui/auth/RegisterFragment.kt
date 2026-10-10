@@ -112,15 +112,13 @@ class RegisterFragment :
                 continuePendingAction(RegistrationRepository(requireContext()), userId)
             }
         tvGoLogin.setOnClickListener {
-                parentFragmentManager.beginTransaction().replace(
-                    R.id.mainContainer,
-                    LoginFragment.newInstance(
-                        destination = arguments?.getString(ARG_DESTINATION),
-                        eventId = arguments?.getInt(ARG_EVENT_ID) ?: -1,
-                        eventTitle = arguments?.getString(ARG_EVENT_TITLE)
-                    )
-                ).addToBackStack(null).commit()
-            }
+            parentFragmentManager.beginTransaction().replace(
+                R.id.mainContainer,
+                LoginFragment.newInstance(
+                    destination = arguments?.getString(ARG_DESTINATION) ?: ""
+                )
+            ).addToBackStack(null).commit()
+        }
     }
 
     private fun continuePendingAction(registrationRepository: RegistrationRepository, userId: Long) {
