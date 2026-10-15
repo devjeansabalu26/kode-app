@@ -113,7 +113,11 @@ class RegisterFragment :
         tvGoLogin.setOnClickListener {
             navigateTo(
                 R.id.loginFragment,
-                LoginFragment.args(destination = arguments?.getString(ARG_DESTINATION) ?: "")
+                LoginFragment.args(
+                    destination = arguments?.getString(ARG_DESTINATION) ?: "",
+                    eventId = arguments?.getInt(ARG_EVENT_ID, -1) ?: -1,
+                    eventTitle = arguments?.getString(ARG_EVENT_TITLE)
+                )
             )
         }
     }
@@ -131,7 +135,7 @@ class RegisterFragment :
                 navigateTo(
                     R.id.ticketFragment,
                     TicketFragment.args(eventId = eventId, eventTitle = eventTitle, qrCode = qrCode),
-                    replaceCurrent = true
+                    popUpToId = R.id.eventDetailFragment
                 )
             }
             "CREATE_EVENT" -> {

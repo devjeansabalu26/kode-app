@@ -25,6 +25,7 @@ import com.kode.app.kode_app.databinding.FragmentEventDetailBinding
 import com.kode.app.kode_app.model.AttendeeItem
 import com.kode.app.kode_app.model.Event
 import com.kode.app.kode_app.retrofit.ClienteClimaRetrofit
+import com.kode.app.kode_app.ui.auth.LoginFragment
 import com.kode.app.kode_app.retrofit.response.ClimaResponse
 import com.kode.app.kode_app.util.Constantes
 import retrofit2.Call
@@ -137,14 +138,41 @@ class EventDetailFragment : Fragment() {
         setupMap(event)
         loadWeather(event)
 
+        val userId = if (session.isLoggedIn()) session.getUserId() else -1L
+        val alreadyRegistered = userId > 0 && registrationRepository.isUserRegisteredInEvent(event.id, userId)
+        when {
+            alreadyRegistered -> {
+                binding.btnRegister.text = "Ver mi pase"
+                binding.btnRegister.isEnabled = true
+            }
+            remaining == 0 -> {
+                binding.btnRegister.text = "Aforo completo"
+                binding.btnRegister.isEnabled = false
+            }
+            else -> {
+                binding.btnRegister.text = "Quiero asistir"
+                binding.btnRegister.isEnabled = true
+            }
+        }
+
         binding.btnRegister.setOnClickListener {
-            val session = SessionManager(requireContext())
             if (!session.isLoggedIn()) {
-                Toast.makeText(requireContext(), "Debes iniciar sesión para preinscribirte", Toast.LENGTH_SHORT).show()
+                showMessage("Inicia sesión para inscribirte")
+                navigateTo(
+                    R.id.loginFragment,
+                    LoginFragment.args(destination = "REGISTER_EVENT", eventId = event.id, eventTitle = event.title)
+                )
                 return@setOnClickListener
             }
 
-            navigateTo(R.id.ticketFragment, TicketFragment.args(eventId = event.id, eventTitle = event.title))
+            val qrCode = registrationRepository.registerUserInEvent(event.id, session.getUserId())
+            if (qrCode == null) {
+                showMessage("No se pudo completar la inscripción")
+                return@setOnClickListener
+            }
+
+            if (!alreadyRegistered) showMessage("¡Inscripción confirmada!")
+            navigateTo(R.id.ticketFragment, TicketFragment.args(eventId = event.id, eventTitle = event.title, qrCode = qrCode))
         }
     }
 

@@ -1,5 +1,7 @@
 package com.kode.app.kode_app.ui.events
 
+import android.graphics.Bitmap
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -7,8 +9,11 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
 import com.kode.app.kode_app.core.SessionManager
 import com.kode.app.kode_app.data.EventRepository
+import com.kode.app.kode_app.data.RegistrationRepository
 import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.databinding.FragmentTicketBinding
 
@@ -45,8 +50,15 @@ class TicketFragment : Fragment() {
             binding.tvTicketEvent.text = if (eventTitle.isNotEmpty()) eventTitle else event.title
             binding.tvTicketUser.text = user.name
 
-            val finalCode = if (qrCodeParam.isNotEmpty()) qrCodeParam else "EVT-${event.id}-${user.id}"
-            binding.tvTicketCode.text = "Acceso General • ID: #$finalCode"
+            val finalCode = qrCodeParam.ifEmpty {
+                RegistrationRepository(requireContext()).getRegistrationQr(event.id, user.id).orEmpty()
+            }
+            if (finalCode.isNotEmpty()) {
+                binding.tvTicketCode.text = "Acceso General • ID: #$finalCode"
+                binding.ivTicketQR.setImageBitmap(generateQrBitmap(finalCode))
+            } else {
+                binding.tvTicketCode.text = "Aún no estás inscrito en este evento"
+            }
 
             binding.tvTicketDate.text = event.date
             binding.tvTicketTime.text = if (!event.endTime.isNullOrEmpty()) event.endTime else "Hora fijada"
@@ -59,6 +71,17 @@ class TicketFragment : Fragment() {
         binding.btnShareTicket.setOnClickListener {
             Toast.makeText(requireContext(), "Preparando boleto para compartir...", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun generateQrBitmap(text: String, size: Int = 512): Bitmap {
+        val matrix = QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, size, size)
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
+        for (x in 0 until size) {
+            for (y in 0 until size) {
+                bitmap.setPixel(x, y, if (matrix.get(x, y)) Color.BLACK else Color.WHITE)
+            }
+        }
+        return bitmap
     }
 
     override fun onDestroyView() {

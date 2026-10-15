@@ -5,14 +5,19 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 
-fun Fragment.navigateTo(destinationId: Int, args: Bundle? = null, replaceCurrent: Boolean = false) {
+fun Fragment.navigateTo(
+    destinationId: Int,
+    args: Bundle? = null,
+    replaceCurrent: Boolean = false,
+    popUpToId: Int? = null
+) {
     val navController = findNavController()
-    val options = if (replaceCurrent) {
-        navController.currentDestination?.let {
+    val options = when {
+        popUpToId != null -> NavOptions.Builder().setPopUpTo(popUpToId, false).build()
+        replaceCurrent -> navController.currentDestination?.let {
             NavOptions.Builder().setPopUpTo(it.id, true).build()
         }
-    } else {
-        null
+        else -> null
     }
     navController.navigate(destinationId, args, options)
 }

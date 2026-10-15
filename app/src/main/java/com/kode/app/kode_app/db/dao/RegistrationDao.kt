@@ -25,8 +25,12 @@ interface RegistrationDao {
     """)
     fun marcarAsistencia(eventId: Int, qrCode: String, now: String): Int
 
-    @Query("UPDATE registrations SET status = :newStatus WHERE event_id = :eventId AND user_id = :userId")
-    fun actualizarEstado(eventId: Int, userId: Long, newStatus: String)
+    @Query("""
+        UPDATE registrations
+        SET status = :newStatus, checked_in = :checkedIn, checked_in_at = :checkedInAt, sync_status = 0
+        WHERE event_id = :eventId AND user_id = :userId
+    """)
+    fun actualizarEstado(eventId: Int, userId: Long, newStatus: String, checkedIn: Boolean, checkedInAt: String?)
 
     @Query("""
         SELECT

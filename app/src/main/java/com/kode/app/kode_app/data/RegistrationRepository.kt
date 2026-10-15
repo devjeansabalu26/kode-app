@@ -103,7 +103,11 @@ class RegistrationRepository(context: Context) {
     }
 
     fun updateAttendanceStatus(eventId: Int, userId: Long, newStatus: String) {
-        registrationDao.actualizarEstado(eventId, userId, newStatus)
+        when (newStatus) {
+            "ATTENDED" -> registrationDao.actualizarEstado(eventId, userId, "ASISTIO_REAL", true, currentDateTime())
+            "ABSENT" -> registrationDao.actualizarEstado(eventId, userId, "ABSENT", false, null)
+            else -> registrationDao.actualizarEstado(eventId, userId, "PREINSCRITO", false, null)
+        }
     }
 
     fun getAttendeesForEvent(eventId: Int): List<AttendeeItem> {
