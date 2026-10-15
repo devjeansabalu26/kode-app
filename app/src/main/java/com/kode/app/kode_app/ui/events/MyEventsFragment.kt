@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -65,6 +66,7 @@ class MyEventsFragment : Fragment() {
         if (!session.isLoggedIn() || userRepository.getUserById(session.getUserId()) == null) {
             session.logout()
             tabs.visibility = View.GONE
+            binding.swipeRefreshMyEvents.isEnabled = false
             showEmpty(message = "Inicia sesión para ver tus eventos", actionText = "Iniciar sesión") {
                 navigateTo(R.id.loginFragment, LoginFragment.args(destination = "MY_EVENTS"))
             }
@@ -83,6 +85,14 @@ class MyEventsFragment : Fragment() {
             }
         )
         showTab(0)
+
+        binding.swipeRefreshMyEvents.setOnChildScrollUpCallback { _, _ ->
+            recyclerView.isVisible && recyclerView.canScrollVertically(-1)
+        }
+        binding.swipeRefreshMyEvents.setOnRefreshListener {
+            showTab(tabs.selectedTabPosition.coerceAtLeast(0))
+            binding.swipeRefreshMyEvents.isRefreshing = false
+        }
     }
 
     private fun showTab(position: Int) {

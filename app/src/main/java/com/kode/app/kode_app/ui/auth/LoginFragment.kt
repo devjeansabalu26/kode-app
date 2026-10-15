@@ -36,10 +36,6 @@ class LoginFragment : Fragment() {
         val eventId = arguments?.getInt(ARG_EVENT_ID, -1) ?: -1
         val eventTitle = arguments?.getString(ARG_EVENT_TITLE)
 
-
-        crearUsuarioDePrueba()
-
-
         binding.btnLogin.setOnClickListener {
             val email = binding.etEmail.text.toString().trim()
             val password = binding.etPassword.text.toString()
@@ -86,23 +82,6 @@ class LoginFragment : Fragment() {
 
         binding.tvRegister.setOnClickListener {
             navigateTo(R.id.registerFragment, RegisterFragment.args(destination, eventId, eventTitle))
-        }
-    }
-
-    private fun crearUsuarioDePrueba() {
-        val userRepository = UserRepository(requireContext())
-        val emailPrueba = "Kade@gmail.com"
-
-        if (!userRepository.userExistsByEmail(emailPrueba)) {
-            userRepository.registerUser(
-                name = "Kade Lopez",
-                dni = "12345678",
-                phone = "987654321",
-                gender = "Masculino",
-                age = 25,
-                email = emailPrueba,
-                password = "kade123"
-            )
         }
     }
 

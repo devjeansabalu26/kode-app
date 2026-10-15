@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/swipeRefreshHome"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+<androidx.core.widget.NestedScrollView
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F9FAFB"
@@ -64,13 +69,16 @@
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:layout_marginBottom="16dp"
-            android:background="@drawable/bg_icon_button"
+            android:background="@drawable/bg_search_field"
             android:drawableStart="@android:drawable/ic_menu_search"
             android:drawablePadding="12dp"
+            android:drawableTint="#6B7280"
             android:hint="Buscar por nombre, código o descripción..."
             android:inputType="text"
             android:paddingHorizontal="16dp"
             android:singleLine="true"
+            android:textColor="#111827"
+            android:textColorHint="#9CA3AF"
             android:textSize="14sp" />
 
 
@@ -183,6 +191,7 @@
                     android:backgroundTint="#000000"
                     android:text="+ Crear"
                     android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
                     android:textSize="12sp" />
             </RelativeLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -274,3 +283,5 @@
     </LinearLayout>
 
 </androidx.core.widget.NestedScrollView>
+
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

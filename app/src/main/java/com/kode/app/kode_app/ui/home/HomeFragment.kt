@@ -58,6 +58,12 @@ class HomeFragment : Fragment() {
         loadFilters()
         configureSearch()
         configureActionButtons()
+
+        binding.swipeRefreshHome.setOnRefreshListener {
+            loadFilters()
+            applyFilters()
+            binding.swipeRefreshHome.isRefreshing = false
+        }
     }
 
     private fun configureActionButtons() {
