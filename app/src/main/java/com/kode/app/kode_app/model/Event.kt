@@ -18,5 +18,14 @@ data class Event(
     val isUntransferable: Boolean = false,
     val registeredCount: Int = 0,
     val attendedCount: Int = 0,
-    val accessCode: String? = null
-) : Serializable
+    val accessCode: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val imageUrl: String? = null
+) : Serializable {
+
+    fun hasLocation(): Boolean = latitude != null && longitude != null
+
+    fun bannerUrl(): String =
+        if (!imageUrl.isNullOrBlank()) imageUrl else "https://picsum.photos/seed/kode$id/800/400"
+}

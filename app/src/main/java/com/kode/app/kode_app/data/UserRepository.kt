@@ -1,9 +1,9 @@
 package com.kode.app.kode_app.data
 
-import android.content.ContentValues
 import android.content.Context
-import android.database.Cursor
-import com.kode.app.kode_app.data.AppDatabaseHelper.Companion.TABLE_USERS
+import androidx.lifecycle.LiveData
+import com.kode.app.kode_app.db.KodeRoomDatabase
+import com.kode.app.kode_app.db.entity.UserEntity
 import com.kode.app.kode_app.model.User
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
@@ -11,9 +11,7 @@ import java.util.Date
 import java.util.Locale
 
 class UserRepository(context: Context) {
-    private val helper = AppDatabaseHelper.getInstance(context)
-
-    private val userColumns = "id, name, dni, phone, gender, age, email"
+    private val userDao = KodeRoomDatabase.getDatabase(context).userDao()
 
     fun registerUser(
         name: String,
@@ -24,78 +22,37 @@ class UserRepository(context: Context) {
         email: String,
         password: String
     ): Long {
-        val values = ContentValues().apply {
-            put("name", name.trim())
-            put("dni", dni.trim())
-            put("phone", phone.trim())
-            put("gender", gender.trim())
-            put("age", age)
-            put("email", email.trim().lowercase())
-            put("password_hash", hashPassword(password))
-            put("created_at", currentDateTime())
-        }
-        return helper.writableDatabase.insert(TABLE_USERS, null, values)
+        val user = UserEntity(
+            name = name.trim(),
+            dni = dni.trim(),
+            phone = phone.trim(),
+            gender = gender.trim(),
+            age = age,
+            email = email.trim().lowercase(),
+            passwordHash = hashPassword(password),
+            createdAt = currentDateTime()
+        )
+        return userDao.insertar(user)
     }
 
     fun userExistsByEmail(email: String): Boolean {
-        return exists(column = "email", value = email.trim().lowercase())
+        return userDao.existeEmail(email.trim().lowercase())
     }
 
     fun userExistsByDni(dni: String): Boolean {
-        return exists(column = "dni", value = dni.trim())
+        return userDao.existeDni(dni.trim())
     }
 
     fun login(email: String, password: String): User? {
-        return findUser(
-            where = "email = ? AND password_hash = ?",
-            args = arrayOf(email.trim().lowercase(), hashPassword(password))
-        )
+        return userDao.login(email.trim().lowercase(), hashPassword(password))
     }
 
     fun getUserById(userId: Long): User? {
-        return findUser(where = "id = ?", args = arrayOf(userId.toString()))
+        return userDao.obtenerPorId(userId)
     }
 
-    private fun findUser(where: String, args: Array<String>): User? {
-        helper.readableDatabase.rawQuery(
-            """
-                SELECT $userColumns
-                FROM $TABLE_USERS
-                WHERE $where
-                LIMIT 1
-                """.trimIndent(), args
-        ).use {
-            return if (it.moveToFirst()) {
-                readUser(it)
-            } else {
-                null
-            }
-        }
-    }
-
-    private fun exists(column: String, value: String): Boolean {
-        helper.readableDatabase.rawQuery(
-            """
-                SELECT id
-                FROM $TABLE_USERS
-                WHERE $column = ?
-                LIMIT 1
-                """.trimIndent(), arrayOf(value)
-        ).use {
-            return it.moveToFirst()
-        }
-    }
-
-    private fun readUser(cursor: Cursor): User {
-        return User(
-            id = cursor.getLong(cursor.getColumnIndexOrThrow("id")),
-            name = cursor.getString(cursor.getColumnIndexOrThrow("name")),
-            dni = cursor.getString(cursor.getColumnIndexOrThrow("dni")),
-            phone = cursor.getString(cursor.getColumnIndexOrThrow("phone")),
-            gender = cursor.getString(cursor.getColumnIndexOrThrow("gender")),
-            age = cursor.getInt(cursor.getColumnIndexOrThrow("age")),
-            email = cursor.getString(cursor.getColumnIndexOrThrow("email"))
-        )
+    fun observeUser(userId: Long): LiveData<User?> {
+        return userDao.observarPorId(userId)
     }
 
     private fun hashPassword(password: String): String {

@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.databinding.FragmentProfileBinding
 import com.kode.app.kode_app.core.SessionManager
+import com.kode.app.kode_app.core.navigateTo
 import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.ui.auth.LoginFragment
 
@@ -42,29 +43,21 @@ class ProfileFragment : Fragment() {
             return
         }
         val userRepository = UserRepository(requireContext())
-        val user = userRepository.getUserById(userId)
-        if (user == null) {
-            session.logout()
-            Toast.makeText(requireContext(), "La sesión ya no es válida", Toast.LENGTH_SHORT).show()
-            openLogin()
-            return
+        userRepository.observeUser(userId).observe(viewLifecycleOwner) { user ->
+            if (user == null) {
+                session.logout()
+                Toast.makeText(requireContext(), "La sesión ya no es válida", Toast.LENGTH_SHORT).show()
+                openLogin()
+                return@observe
+            }
+            binding.tvProfileName.text = user.name
+            binding.tvProfileEmail.text = user.email
+            binding.tvProfileDni.text = "DNI: ${user.dni}"
+            binding.tvProfilePhone.text = "Celular: ${user.phone}"
+            binding.tvProfileGender.text = "Género: ${user.gender}"
+            binding.tvProfileAge.text = "Edad: ${user.age}"
         }
-        val tvName = binding.tvProfileName
-        val tvEmail = binding.tvProfileEmail
-        val tvDni = binding.tvProfileDni
-        val tvPhone = binding.tvProfilePhone
-        val tvGender = binding.tvProfileGender
-        val tvAge = binding.tvProfileAge
-        val btnLogout = binding.btnLogout
-        tvName.text = user.name
-        tvEmail.text = user.email
-        tvDni.text = "DNI: ${user.dni}"
-        tvPhone.text = "Celular: ${user.phone}"
-        tvGender.text = "Género: ${user.gender}"
-
-        tvAge.text =
-            "Edad: ${user.age}"
-        btnLogout.setOnClickListener {
+        binding.btnLogout.setOnClickListener {
             session.logout()
             Toast.makeText(requireContext(), "Sesión cerrada", Toast.LENGTH_SHORT).show()
             openLogin()
@@ -72,6 +65,6 @@ class ProfileFragment : Fragment() {
     }
 
     private fun openLogin() {
-        parentFragmentManager.beginTransaction().replace(R.id.mainContainer, LoginFragment.newInstance(destination = "PROFILE")).commit()
+        navigateTo(R.id.loginFragment, LoginFragment.args(destination = "PROFILE"), replaceCurrent = true)
     }
 }

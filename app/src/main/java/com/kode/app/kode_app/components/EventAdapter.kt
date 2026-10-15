@@ -3,6 +3,7 @@ package com.kode.app.kode_app.components
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.kode.app.kode_app.databinding.ItemEventBinding
 import com.kode.app.kode_app.model.Event
 
@@ -33,6 +34,13 @@ class EventAdapter(
         holder.binding.tvEventDescription.text = event.description
         holder.binding.tvEventDate.text = " ${event.date}"
         holder.binding.tvEventLocation.text = "${event.location}"
+
+        Glide.with(holder.itemView.context)
+            .load(event.bannerUrl())
+            .placeholder(android.R.drawable.ic_menu_gallery)
+            .error(android.R.drawable.ic_menu_gallery)
+            .centerCrop()
+            .into(holder.binding.ivEventBanner)
 
 
         val remainingSeats = (event.capacity - event.registeredCount).coerceAtLeast(0)

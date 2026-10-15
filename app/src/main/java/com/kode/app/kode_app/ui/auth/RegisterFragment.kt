@@ -17,10 +17,9 @@ import com.kode.app.kode_app.databinding.FragmentRegisterBinding
 import com.kode.app.kode_app.core.SessionManager
 import com.kode.app.kode_app.data.RegistrationRepository
 import com.kode.app.kode_app.data.UserRepository
-import com.kode.app.kode_app.ui.events.EventFormFragment
-import com.kode.app.kode_app.ui.events.MyEventsFragment
+import com.kode.app.kode_app.core.goToTab
+import com.kode.app.kode_app.core.navigateTo
 import com.kode.app.kode_app.ui.events.TicketFragment
-import com.kode.app.kode_app.ui.profile.ProfileFragment
 class RegisterFragment :
     Fragment() {
     private var _binding: FragmentRegisterBinding? = null
@@ -112,12 +111,10 @@ class RegisterFragment :
                 continuePendingAction(RegistrationRepository(requireContext()), userId)
             }
         tvGoLogin.setOnClickListener {
-            parentFragmentManager.beginTransaction().replace(
-                R.id.mainContainer,
-                LoginFragment.newInstance(
-                    destination = arguments?.getString(ARG_DESTINATION) ?: ""
-                )
-            ).addToBackStack(null).commit()
+            navigateTo(
+                R.id.loginFragment,
+                LoginFragment.args(destination = arguments?.getString(ARG_DESTINATION) ?: "")
+            )
         }
     }
 
@@ -131,17 +128,20 @@ class RegisterFragment :
                     showMessage("No se pudo registrar en el evento")
                     return
                 }
-                parentFragmentManager.beginTransaction()
-                    .replace(R.id.mainContainer, TicketFragment.newInstance(eventId = eventId, eventTitle = eventTitle, qrCode = qrCode)).commit()
+                navigateTo(
+                    R.id.ticketFragment,
+                    TicketFragment.args(eventId = eventId, eventTitle = eventTitle, qrCode = qrCode),
+                    replaceCurrent = true
+                )
             }
             "CREATE_EVENT" -> {
-                parentFragmentManager.beginTransaction().replace(R.id.mainContainer, EventFormFragment()).commit()
+                goToTab(R.id.nav_create_event)
             }
             "MY_EVENTS" -> {
-                parentFragmentManager.beginTransaction().replace(R.id.mainContainer, MyEventsFragment()).commit()
+                goToTab(R.id.nav_my_events)
             }
             "PROFILE" -> {
-                parentFragmentManager.beginTransaction().replace(R.id.mainContainer, ProfileFragment()).commit()
+                goToTab(R.id.nav_profile)
             }
             else -> {
             }
@@ -156,14 +156,12 @@ class RegisterFragment :
         private const val ARG_DESTINATION = "destination"
         private const val ARG_EVENT_ID = "event_id"
         private const val ARG_EVENT_TITLE = "event_title"
-        fun newInstance(destination: String?, eventId: Int = -1, eventTitle: String? = null): RegisterFragment {
-            return RegisterFragment().apply {
-                    arguments = Bundle().apply {
-                            putString(ARG_DESTINATION, destination)
-                            putInt(ARG_EVENT_ID, eventId)
-                            putString(ARG_EVENT_TITLE, eventTitle)
-                        }
-                }
+        fun args(destination: String?, eventId: Int = -1, eventTitle: String? = null): Bundle {
+            return Bundle().apply {
+                putString(ARG_DESTINATION, destination)
+                putInt(ARG_EVENT_ID, eventId)
+                putString(ARG_EVENT_TITLE, eventTitle)
+            }
         }
     }
 }

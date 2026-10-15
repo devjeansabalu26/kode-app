@@ -10,16 +10,30 @@ import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMapOptions
+import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MarkerOptions
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.core.SessionManager
+import com.kode.app.kode_app.core.navigateTo
 import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.data.RegistrationRepository
 import com.kode.app.kode_app.databinding.FragmentEventDetailBinding
 import com.kode.app.kode_app.model.AttendeeItem
 import com.kode.app.kode_app.model.Event
-import com.kode.app.kode_app.ui.checkin.QrScannerFragment
-import com.kode.app.kode_app.ui.events.AttendeeAdapter
-import com.kode.app.kode_app.ui.events.TicketFragment
+import com.kode.app.kode_app.retrofit.ClienteClimaRetrofit
+import com.kode.app.kode_app.retrofit.response.ClimaResponse
+import com.kode.app.kode_app.util.Constantes
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 class EventDetailFragment : Fragment() {
 
@@ -119,6 +133,10 @@ class EventDetailFragment : Fragment() {
             "Pase digital con código QR alfanumérico"
         }
 
+        loadBanner(event)
+        setupMap(event)
+        loadWeather(event)
+
         binding.btnRegister.setOnClickListener {
             val session = SessionManager(requireContext())
             if (!session.isLoggedIn()) {
@@ -126,11 +144,90 @@ class EventDetailFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.mainContainer, TicketFragment.newInstance(eventId = event.id, eventTitle = event.title))
-                .addToBackStack(null)
-                .commit()
+            navigateTo(R.id.ticketFragment, TicketFragment.args(eventId = event.id, eventTitle = event.title))
         }
+    }
+
+    private fun loadBanner(event: Event) {
+        Glide.with(this)
+            .load(event.bannerUrl())
+            .centerCrop()
+            .into(binding.ivDetailBanner)
+    }
+
+    private fun setupMap(event: Event) {
+        val lat = event.latitude ?: return
+        val lng = event.longitude ?: return
+        val position = LatLng(lat, lng)
+
+        binding.cardDetailMap.isVisible = true
+        val mapFragment = SupportMapFragment.newInstance(
+            GoogleMapOptions().liteMode(true).mapToolbarEnabled(true)
+        )
+        childFragmentManager.beginTransaction()
+            .replace(R.id.mapDetailContainer, mapFragment)
+            .commit()
+
+        mapFragment.getMapAsync { map ->
+            map.addMarker(MarkerOptions().position(position).title(event.location))
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 16f))
+        }
+    }
+
+    private fun loadWeather(event: Event) {
+        val lat = event.latitude ?: return
+        val lng = event.longitude ?: return
+        val eventDay = event.date.take(10)
+        val daysUntilEvent = daysUntil(eventDay) ?: return
+        if (daysUntilEvent < 0) return
+
+        binding.cardWeather.isVisible = true
+        if (daysUntilEvent > Constantes.DIAS_MAX_PRONOSTICO) {
+            binding.tvWeather.text = "El pronóstico estará disponible 16 días antes del evento."
+            return
+        }
+
+        val request: Call<ClimaResponse> = ClienteClimaRetrofit
+            .retrofitClimaService.obtenerPronostico(lat, lng, eventDay, eventDay)
+        request.enqueue(object : Callback<ClimaResponse> {
+            override fun onResponse(call: Call<ClimaResponse>, response: Response<ClimaResponse>) {
+                val binding = _binding ?: return
+                val daily = response.body()?.daily
+                if (!response.isSuccessful || daily == null || daily.time.isEmpty()) {
+                    binding.tvWeather.text = "No hay pronóstico disponible para esta fecha."
+                    return
+                }
+                val estado = ClienteClimaRetrofit.describirClima(daily.weatherCode.firstOrNull())
+                val max = daily.temperaturaMax.firstOrNull()
+                val min = daily.temperaturaMin.firstOrNull()
+                val lluvia = daily.probabilidadLluvia.firstOrNull()
+                binding.tvWeather.text = buildString {
+                    append(estado)
+                    if (min != null && max != null) append("  ·  ${min.toInt()}° / ${max.toInt()}°C")
+                    if (lluvia != null) append("\nProbabilidad de lluvia: $lluvia%")
+                }
+            }
+
+            override fun onFailure(call: Call<ClimaResponse>, t: Throwable) {
+                val binding = _binding ?: return
+                binding.tvWeather.text = "No se pudo obtener el clima (revisa tu conexión)."
+            }
+        })
+    }
+
+    private fun daysUntil(day: String): Long? {
+        val eventDate = try {
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(day)
+        } catch (_: Exception) {
+            null
+        } ?: return null
+        val today = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        return TimeUnit.MILLISECONDS.toDays(eventDate.time - today.timeInMillis)
     }
 
     private fun setupCreatorDashboard(event: Event) {
@@ -198,16 +295,10 @@ class EventDetailFragment : Fragment() {
     }
 
     private fun openQrScanner(eventId: Int) {
-        val qrFragment = QrScannerFragment().apply {
-            arguments = Bundle().apply {
-                putInt("EVENT_ID", eventId)
-            }
+        val args = Bundle().apply {
+            putInt("EVENT_ID", eventId)
         }
-
-        parentFragmentManager.beginTransaction()
-            .replace(R.id.mainContainer, qrFragment)
-            .addToBackStack(null)
-            .commit()
+        navigateTo(R.id.qrScannerFragment, args)
     }
 
     private fun calculatePercentage(value: Int, maximum: Int): Int {
@@ -223,12 +314,10 @@ class EventDetailFragment : Fragment() {
         private const val ARG_ID = "id"
         private const val ARG_TITLE = "title"
 
-        fun newInstance(event: Event): EventDetailFragment {
-            return EventDetailFragment().apply {
-                arguments = Bundle().apply {
-                    putInt(ARG_ID, event.id)
-                    putString(ARG_TITLE, event.title)
-                }
+        fun args(event: Event): Bundle {
+            return Bundle().apply {
+                putInt(ARG_ID, event.id)
+                putString(ARG_TITLE, event.title)
             }
         }
     }

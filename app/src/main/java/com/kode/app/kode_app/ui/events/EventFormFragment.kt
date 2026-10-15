@@ -1,27 +1,44 @@
 package com.kode.app.kode_app.ui.events
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.chip.Chip
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.core.SessionManager
+import com.kode.app.kode_app.core.goToTab
+import com.kode.app.kode_app.core.navigateTo
 import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.databinding.FragmentEventFormBinding
 import com.kode.app.kode_app.ui.auth.LoginFragment
-import com.kode.app.kode_app.ui.home.HomeFragment
+import com.kode.app.kode_app.util.Constantes
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-class EventFormFragment : Fragment() {
+class EventFormFragment : Fragment(), OnMapReadyCallback {
     private var _binding: FragmentEventFormBinding? = null
     private val binding get() = _binding!!
 
@@ -34,6 +51,21 @@ class EventFormFragment : Fragment() {
     private var timeSelected = false
     private var selectedEndTime = ""
 
+    private var map: GoogleMap? = null
+    private var marker: Marker? = null
+    private var selectedLatLng: LatLng? = null
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            enableMyLocation()
+        } else {
+            showMessage("Permiso de ubicación denegado")
+        }
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentEventFormBinding.inflate(inflater, container, false)
         return binding.root
@@ -41,6 +73,8 @@ class EventFormFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        map = null
+        marker = null
         _binding = null
     }
 
@@ -68,6 +102,8 @@ class EventFormFragment : Fragment() {
         binding.btnBack.setOnClickListener { navigateToHome() }
         binding.btnCancel.setOnClickListener { navigateToHome() }
         binding.btnSaveDraft.setOnClickListener { showMessage("Borrador guardado") }
+
+        setupMap()
 
         binding.btnPublish.setOnClickListener {
             val title = binding.etEventTitle.text.toString().trim()
@@ -126,7 +162,10 @@ class EventFormFragment : Fragment() {
                 isPrivate = isPrivate,
                 requireDni = binding.cbRequireDni.isChecked,
                 isUntransferable = binding.cbUntransferable.isChecked,
-                accessCode = accessCode
+                accessCode = accessCode,
+                latitude = selectedLatLng?.latitude,
+                longitude = selectedLatLng?.longitude,
+                imageUrl = binding.etImageUrl.text.toString()
             )
 
             if (eventId == -1L) {
@@ -182,12 +221,76 @@ class EventFormFragment : Fragment() {
         ).show()
     }
 
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupMap() {
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+        val mapFragment = childFragmentManager
+            .findFragmentById(binding.mapPicker.id) as SupportMapFragment
+        mapFragment.getMapAsync(this)
+
+        binding.mapTouchOverlay.setOnTouchListener { view, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                view.parent.requestDisallowInterceptTouchEvent(true)
+            }
+            false
+        }
+
+        binding.btnMyLocation.setOnClickListener { checkLocationPermission() }
+    }
+
+    override fun onMapReady(googleMap: GoogleMap) {
+        map = googleMap
+        googleMap.uiSettings.isZoomControlsEnabled = true
+
+        val start = selectedLatLng ?: LatLng(Constantes.LIMA_LAT, Constantes.LIMA_LNG)
+        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(start, if (selectedLatLng != null) 16f else 11f))
+        selectedLatLng?.let { selectLocation(it) }
+
+        googleMap.setOnMapClickListener { latLng -> selectLocation(latLng) }
+    }
+
+    private fun selectLocation(latLng: LatLng) {
+        selectedLatLng = latLng
+        marker?.remove()
+        marker = map?.addMarker(MarkerOptions().position(latLng).title("Lugar del evento"))
+        _binding?.tvSelectedCoords?.text = String.format(
+            Locale.US, "📍 %.5f, %.5f", latLng.latitude, latLng.longitude
+        )
+    }
+
+    private fun checkLocationPermission() {
+        if (ContextCompat.checkSelfPermission(requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED) {
+            enableMyLocation()
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun enableMyLocation() {
+        val googleMap = map ?: return
+        googleMap.isMyLocationEnabled = true
+        googleMap.uiSettings.isMyLocationButtonEnabled = true
+
+        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            if (location != null) {
+                val currentLocation = LatLng(location.latitude, location.longitude)
+                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 16f))
+                selectLocation(currentLocation)
+            } else {
+                showMessage("No se puede obtener la ubicación actual")
+            }
+        }
+    }
+
     private fun navigateToHome() {
-        parentFragmentManager.beginTransaction().replace(R.id.mainContainer, HomeFragment()).commit()
+        goToTab(R.id.nav_home)
     }
 
     private fun openLogin() {
-        parentFragmentManager.beginTransaction().replace(R.id.mainContainer, LoginFragment.newInstance(destination = "CREATE_EVENT")).commit()
+        navigateTo(R.id.loginFragment, LoginFragment.args(destination = "CREATE_EVENT"), replaceCurrent = true)
     }
 
     private fun showMessage(message: String) {

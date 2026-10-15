@@ -10,7 +10,8 @@ import com.kode.app.kode_app.R
 import com.kode.app.kode_app.core.SessionManager
 import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.databinding.FragmentLoginBinding
-import com.kode.app.kode_app.ui.events.MyEventsFragment
+import com.kode.app.kode_app.core.goToTab
+import com.kode.app.kode_app.core.navigateTo
 
 class LoginFragment : Fragment() {
 
@@ -57,9 +58,7 @@ class LoginFragment : Fragment() {
                 Toast.makeText(requireContext(), "¡Bienvenido, ${user.name}!", Toast.LENGTH_SHORT).show()
 
 
-                parentFragmentManager.beginTransaction()
-                    .replace(R.id.mainContainer, MyEventsFragment())
-                    .commit()
+                goToTab(R.id.nav_my_events)
             } else {
                 Toast.makeText(requireContext(), "Correo o contraseña incorrectos", Toast.LENGTH_SHORT).show()
             }
@@ -67,13 +66,7 @@ class LoginFragment : Fragment() {
 
 
         binding.tvRegister.setOnClickListener {
-            parentFragmentManager.beginTransaction()
-                .replace(
-                    R.id.mainContainer,
-                    RegisterFragment.newInstance(destination)
-                )
-                .addToBackStack(null)
-                .commit()
+            navigateTo(R.id.registerFragment, RegisterFragment.args(destination))
         }
     }
 
@@ -102,11 +95,9 @@ class LoginFragment : Fragment() {
     companion object {
         private const val ARG_DESTINATION = "destination"
 
-        fun newInstance(destination: String = ""): LoginFragment {
-            return LoginFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_DESTINATION, destination)
-                }
+        fun args(destination: String = ""): Bundle {
+            return Bundle().apply {
+                putString(ARG_DESTINATION, destination)
             }
         }
     }

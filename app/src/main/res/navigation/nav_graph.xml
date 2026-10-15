@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/nav_home"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <fragment
+        android:id="@+id/nav_home"
+        android:name="com.kode.app.kode_app.ui.home.HomeFragment"
+        android:label="Inicio"
+        tools:layout="@layout/fragment_home" />
+
+    <fragment
+        android:id="@+id/nav_my_events"
+        android:name="com.kode.app.kode_app.ui.events.MyEventsFragment"
+        android:label="Mis eventos"
+        tools:layout="@layout/fragment_my_events" />
+
+    <fragment
+        android:id="@+id/nav_create_event"
+        android:name="com.kode.app.kode_app.ui.events.EventFormFragment"
+        android:label="Crear evento"
+        tools:layout="@layout/fragment_event_form" />
+
+    <fragment
+        android:id="@+id/nav_profile"
+        android:name="com.kode.app.kode_app.ui.profile.ProfileFragment"
+        android:label="Mi perfil"
+        tools:layout="@layout/fragment_profile" />
+
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.kode.app.kode_app.ui.auth.LoginFragment"
+        android:label="Iniciar sesión"
+        tools:layout="@layout/fragment_login" />
+
+    <fragment
+        android:id="@+id/registerFragment"
+        android:name="com.kode.app.kode_app.ui.auth.RegisterFragment"
+        android:label="Registro"
+        tools:layout="@layout/fragment_register" />
+
+    <fragment
+        android:id="@+id/eventDetailFragment"
+        android:name="com.kode.app.kode_app.ui.events.EventDetailFragment"
+        android:label="Detalle del evento"
+        tools:layout="@layout/fragment_event_detail" />
+
+    <fragment
+        android:id="@+id/ticketFragment"
+        android:name="com.kode.app.kode_app.ui.events.TicketFragment"
+        android:label="Mi pase"
+        tools:layout="@layout/fragment_ticket" />
+
+    <fragment
+        android:id="@+id/qrScannerFragment"
+        android:name="com.kode.app.kode_app.ui.checkin.QrScannerFragment"
+        android:label="Escáner QR"
+        tools:layout="@layout/fragment_qr_scanner" />
+</navigation>

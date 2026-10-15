@@ -18,8 +18,9 @@ import com.kode.app.kode_app.core.SessionManager
 import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.model.Event
+import com.kode.app.kode_app.core.goToTab
+import com.kode.app.kode_app.core.navigateTo
 import com.kode.app.kode_app.ui.auth.LoginFragment
-import com.kode.app.kode_app.ui.home.HomeFragment
 
 class MyEventsFragment : Fragment() {
     private var _binding: FragmentMyEventsBinding? = null
@@ -65,8 +66,7 @@ class MyEventsFragment : Fragment() {
             session.logout()
             tabs.visibility = View.GONE
             showEmpty(message = "Inicia sesión para ver tus eventos", actionText = "Iniciar sesión") {
-                parentFragmentManager.beginTransaction().replace(R.id.mainContainer, LoginFragment.newInstance(destination = "MY_EVENTS"))
-                    .addToBackStack(null).commit()
+                navigateTo(R.id.loginFragment, LoginFragment.args(destination = "MY_EVENTS"))
             }
             return
         }
@@ -93,7 +93,7 @@ class MyEventsFragment : Fragment() {
                 emptyMessage = "Aún no te has inscrito a ningún evento",
                 actionText = "Explorar eventos"
             ) {
-                openFragment(HomeFragment())
+                goToTab(R.id.nav_home)
             }
         } else {
             showEvents(
@@ -101,7 +101,7 @@ class MyEventsFragment : Fragment() {
                 emptyMessage = "Aún no has creado ningún evento",
                 actionText = "+ Crear evento"
             ) {
-                openFragment(EventFormFragment())
+                goToTab(R.id.nav_create_event)
             }
         }
     }
@@ -115,7 +115,7 @@ class MyEventsFragment : Fragment() {
         layoutEmpty.visibility = View.GONE
         recyclerView.visibility = View.VISIBLE
         recyclerView.adapter = EventAdapter(events = events, currentUserId = session.getUserId()) { event ->
-                openFragment(EventDetailFragment.newInstance(event))
+                navigateTo(R.id.eventDetailFragment, EventDetailFragment.args(event))
             }
     }
 
@@ -127,9 +127,5 @@ class MyEventsFragment : Fragment() {
         btnEmptyAction.setOnClickListener {
             onAction()
         }
-    }
-
-    private fun openFragment(fragment: Fragment) {
-        parentFragmentManager.beginTransaction().replace(R.id.mainContainer, fragment).addToBackStack(null).commit()
     }
 }

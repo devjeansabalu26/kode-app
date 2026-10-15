@@ -15,12 +15,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.components.EventAdapter
 import com.kode.app.kode_app.core.SessionManager
+import com.kode.app.kode_app.core.goToTab
+import com.kode.app.kode_app.core.navigateTo
 import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.databinding.FragmentHomeBinding
 import com.kode.app.kode_app.model.Event
-import com.kode.app.kode_app.ui.auth.LoginFragment
 import com.kode.app.kode_app.ui.events.EventDetailFragment
-import com.kode.app.kode_app.ui.events.EventFormFragment
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -62,16 +62,7 @@ class HomeFragment : Fragment() {
 
     private fun configureActionButtons() {
         binding.btnCrearEvento.setOnClickListener {
-            val session = SessionManager(requireContext())
-            val fragment = if (session.isLoggedIn()) {
-                EventFormFragment()
-            } else {
-                LoginFragment.newInstance(destination = "CREATE_EVENT")
-            }
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.mainContainer, fragment)
-                .addToBackStack(null)
-                .commit()
+            goToTab(R.id.nav_create_event)
         }
 
         binding.btnIngresarCodigo.setOnClickListener {
@@ -97,10 +88,7 @@ class HomeFragment : Fragment() {
                     // Busca directo por código (sea privado o público)
                     val event = eventRepository.getEventByAccessCode(code)
                     if (event != null) {
-                        parentFragmentManager.beginTransaction()
-                            .replace(R.id.mainContainer, EventDetailFragment.newInstance(event))
-                            .addToBackStack(null)
-                            .commit()
+                        navigateTo(R.id.eventDetailFragment, EventDetailFragment.args(event))
                     } else {
                         Toast.makeText(requireContext(), "Código no válido o evento inexistente", Toast.LENGTH_SHORT).show()
                     }
@@ -199,10 +187,7 @@ class HomeFragment : Fragment() {
         val currentUserId = if (session.isLoggedIn()) session.getUserId() else null
 
         binding.rvEvents.adapter = EventAdapter(events = events, currentUserId = currentUserId) { event ->
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.mainContainer, EventDetailFragment.newInstance(event))
-                .addToBackStack(null)
-                .commit()
+            navigateTo(R.id.eventDetailFragment, EventDetailFragment.args(event))
         }
     }
 

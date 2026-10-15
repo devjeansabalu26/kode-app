@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import com.kode.app.kode_app.core.SessionManager
 import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.data.UserRepository
@@ -52,7 +53,7 @@ class TicketFragment : Fragment() {
         }
 
         binding.btnBack.setOnClickListener {
-            parentFragmentManager.popBackStack()
+            findNavController().popBackStack()
         }
 
         binding.btnShareTicket.setOnClickListener {
@@ -70,13 +71,11 @@ class TicketFragment : Fragment() {
         private const val ARG_EVENT_TITLE = "event_title"
         private const val ARG_QR_CODE = "qr_code"
 
-        fun newInstance(eventId: Int, eventTitle: String? = null, qrCode: String? = null): TicketFragment {
-            return TicketFragment().apply {
-                arguments = Bundle().apply {
-                    putInt(ARG_EVENT_ID, eventId)
-                    putString(ARG_EVENT_TITLE, eventTitle)
-                    putString(ARG_QR_CODE, qrCode)
-                }
+        fun args(eventId: Int, eventTitle: String? = null, qrCode: String? = null): Bundle {
+            return Bundle().apply {
+                putInt(ARG_EVENT_ID, eventId)
+                putString(ARG_EVENT_TITLE, eventTitle)
+                putString(ARG_QR_CODE, qrCode)
             }
         }
     }
