@@ -2,6 +2,7 @@
 
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -24,7 +25,7 @@
             android:id="@+id/tvProfileName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Nombre"
+            tools:text="Nombre"
             android:textSize="22sp"
             android:textStyle="bold"
             android:layout_marginTop="32dp" />
@@ -33,7 +34,7 @@
             android:id="@+id/tvProfileEmail"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="correo@gmail.com"
+            tools:text="correo@gmail.com"
             android:textSize="16sp"
             android:layout_marginTop="6dp" />
 
@@ -49,28 +50,28 @@
             android:id="@+id/tvProfileDni"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="DNI: -"
+            tools:text="DNI: -"
             android:layout_marginTop="16dp" />
 
         <TextView
             android:id="@+id/tvProfilePhone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Celular: -"
+            tools:text="Celular: -"
             android:layout_marginTop="12dp" />
 
         <TextView
             android:id="@+id/tvProfileGender"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Género: -"
+            tools:text="Género: -"
             android:layout_marginTop="12dp" />
 
         <TextView
             android:id="@+id/tvProfileAge"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Edad: -"
+            tools:text="Edad: -"
             android:layout_marginTop="12dp" />
 
         <Button

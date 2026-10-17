@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -34,6 +35,7 @@ import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.databinding.FragmentEventFormBinding
 import com.kode.app.kode_app.ui.auth.LoginFragment
 import com.kode.app.kode_app.util.Constantes
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -81,18 +83,24 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         session = SessionManager(requireContext())
-        userRepository = UserRepository(requireContext())
-        eventRepository = EventRepository(requireContext())
+        userRepository = UserRepository()
+        eventRepository = EventRepository()
 
         if (!session.isLoggedIn()) {
             openLogin()
             return
         }
         val userId = session.getUserId()
-        if (userId <= 0 || userRepository.getUserById(userId) == null) {
+        if (userId <= 0) {
             session.logout()
             openLogin()
             return
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (userRepository.getUserById(userId) == null) {
+                session.logout()
+                openLogin()
+            }
         }
 
         binding.etEventDate.setOnClickListener { showDatePicker(binding.etEventDate) }
@@ -112,11 +120,9 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
             val capacityText = binding.etCapacity.text.toString().trim()
             val accessCode = binding.etAccessCode.text.toString().trim()
 
-            // Obtener Categoría seleccionada de Chips
             val selectedChipId = binding.chipGroupCategory.checkedChipId
-            val category = if (selectedChipId != View.NO_ID) {
-                binding.root.findViewById<Chip>(selectedChipId).text.toString().replace("⚡", "").trim()
-            } else "Tecnología"
+            if (selectedChipId == View.NO_ID) { showMessage("Selecciona una categoría"); return@setOnClickListener }
+            val category = binding.root.findViewById<Chip>(selectedChipId).text.toString().replace("⚡", "").trim()
 
 
             val eventType = when (binding.toggleEventType.checkedButtonId) {
@@ -149,32 +155,40 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
             val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             val databaseDate = formatter.format(selectedDateTime.time)
 
-            val eventId = eventRepository.createEvent(
-                creatorId = creatorId,
-                title = title,
-                description = description,
-                date = databaseDate,
-                location = location,
-                category = category,
-                capacity = capacity,
-                endTime = selectedEndTime,
-                eventType = eventType,
-                isPrivate = isPrivate,
-                requireDni = binding.cbRequireDni.isChecked,
-                isUntransferable = binding.cbUntransferable.isChecked,
-                accessCode = accessCode,
-                latitude = selectedLatLng?.latitude,
-                longitude = selectedLatLng?.longitude,
-                imageUrl = binding.etImageUrl.text.toString()
-            )
+            val requireDni = binding.cbRequireDni.isChecked
+            val isUntransferable = binding.cbUntransferable.isChecked
+            val imageUrl = binding.etImageUrl.text.toString()
 
-            if (eventId == -1L) {
-                showMessage("No se pudo crear el evento")
-                return@setOnClickListener
+            binding.btnPublish.isEnabled = false
+            viewLifecycleOwner.lifecycleScope.launch {
+                val eventId = eventRepository.createEvent(
+                    creatorId = creatorId,
+                    title = title,
+                    description = description,
+                    date = databaseDate,
+                    location = location,
+                    category = category,
+                    capacity = capacity,
+                    endTime = selectedEndTime,
+                    eventType = eventType,
+                    isPrivate = isPrivate,
+                    requireDni = requireDni,
+                    isUntransferable = isUntransferable,
+                    accessCode = accessCode,
+                    latitude = selectedLatLng?.latitude,
+                    longitude = selectedLatLng?.longitude,
+                    imageUrl = imageUrl
+                )
+                binding.btnPublish.isEnabled = true
+
+                if (eventId == -1L) {
+                    showMessage("No se pudo crear el evento")
+                    return@launch
+                }
+
+                showMessage("Evento publicado correctamente")
+                navigateToHome()
             }
-
-            showMessage("Evento publicado correctamente")
-            navigateToHome()
         }
     }
 

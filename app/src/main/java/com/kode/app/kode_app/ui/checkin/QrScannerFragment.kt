@@ -13,6 +13,8 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -20,11 +22,13 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import com.kode.app.kode_app.R
+import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.data.RegistrationRepository
 import com.kode.app.kode_app.data.RegistrationRepository.ScanResult
 import com.kode.app.kode_app.databinding.FragmentQrScannerBinding
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlinx.coroutines.launch
 
 class QrScannerFragment : Fragment() {
 
@@ -34,7 +38,7 @@ class QrScannerFragment : Fragment() {
     private lateinit var repository: RegistrationRepository
     private lateinit var cameraExecutor: ExecutorService
 
-    private var eventId: Int = 1
+    private var eventId: Int = -1
     private var isProcessingScan = false
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -59,13 +63,17 @@ class QrScannerFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        repository = RegistrationRepository(requireContext())
+        repository = RegistrationRepository()
         cameraExecutor = Executors.newSingleThreadExecutor()
 
-        arguments?.let {
-            eventId = it.getInt("EVENT_ID", 1)
+        eventId = arguments?.getInt("EVENT_ID", -1) ?: -1
+        if (eventId <= 0) {
+            Toast.makeText(requireContext(), "No se pudo identificar el evento", Toast.LENGTH_SHORT).show()
+            findNavController().popBackStack()
+            return
         }
 
+        loadEventTitle()
         updateAttendanceMetrics()
 
         if (hasCameraPermission()) {
@@ -156,21 +164,23 @@ class QrScannerFragment : Fragment() {
     }
 
     private fun handleQrCodeScanned(qrCode: String) {
-        when (val result = repository.processQrScan(eventId, qrCode)) {
-            is ScanResult.Success -> {
-                showScanDialog("✅ INGRESO PERMITIDO", "Bienvenido(a): ${result.userName}\nDNI: ${result.dni}")
+        viewLifecycleOwner.lifecycleScope.launch {
+            when (val result = repository.processQrScan(eventId, qrCode)) {
+                is ScanResult.Success -> {
+                    showScanDialog("✅ INGRESO PERMITIDO", "Bienvenido(a): ${result.userName}\nDNI: ${result.dni}")
+                }
+                is ScanResult.AlreadyCheckedIn -> {
+                    showScanDialog("⚠️ REINGRESO DUPLICADO", "El asistente ${result.userName} ya registró su ingreso a las ${result.checkinTime}.")
+                }
+                is ScanResult.NotFound -> {
+                    showNotFoundDialog(qrCode)
+                }
+                is ScanResult.Error -> {
+                    showScanDialog("❌ ERROR", result.message)
+                }
             }
-            is ScanResult.AlreadyCheckedIn -> {
-                showScanDialog("⚠️ REINGRESO DUPLICADO", "El asistente ${result.userName} ya registró su ingreso a las ${result.checkinTime}.")
-            }
-            is ScanResult.NotFound -> {
-                showNotFoundDialog(qrCode)
-            }
-            is ScanResult.Error -> {
-                showScanDialog("❌ ERROR", result.message)
-            }
+            updateAttendanceMetrics()
         }
-        updateAttendanceMetrics()
     }
 
     private fun showScanDialog(title: String, message: String) {
@@ -205,7 +215,6 @@ class QrScannerFragment : Fragment() {
         val context = requireContext()
         val layoutInflater = android.view.LayoutInflater.from(context)
 
-        // Inflamos el layout usando el paquete completo para asegurar la referencia de R
         val dialogView = layoutInflater.inflate(com.kode.app.kode_app.R.layout.dialog_express_register, null)
 
         val etName = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(com.kode.app.kode_app.R.id.etExpressName)
@@ -219,19 +228,22 @@ class QrScannerFragment : Fragment() {
                 val name = etName?.text?.toString()?.trim() ?: ""
                 val dni = etDni?.text?.toString()?.trim() ?: ""
 
+                dialogInterface.dismiss()
                 if (name.isNotEmpty() && dni.length >= 8) {
-                    val success = repository.registerExpressUser(eventId, name, dni)
-                    if (success) {
-                        Toast.makeText(context, "¡Registro express completado!", Toast.LENGTH_SHORT).show()
-                        updateAttendanceMetrics()
-                    } else {
-                        Toast.makeText(context, "Error al registrar", Toast.LENGTH_SHORT).show()
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        val success = repository.registerExpressUser(eventId, name, dni)
+                        if (success) {
+                            Toast.makeText(context, "¡Registro express completado!", Toast.LENGTH_SHORT).show()
+                            updateAttendanceMetrics()
+                        } else {
+                            Toast.makeText(context, "Error al registrar", Toast.LENGTH_SHORT).show()
+                        }
+                        isProcessingScan = false
                     }
                 } else {
                     Toast.makeText(context, "Ingrese datos válidos (DNI 8 dígitos)", Toast.LENGTH_SHORT).show()
+                    isProcessingScan = false
                 }
-                dialogInterface.dismiss()
-                isProcessingScan = false
             }
             .setNegativeButton("Cancelar") { dialogInterface: android.content.DialogInterface, _: Int ->
                 dialogInterface.dismiss()
@@ -240,12 +252,20 @@ class QrScannerFragment : Fragment() {
             .show()
     }
 
+    private fun loadEventTitle() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            EventRepository().getEventById(eventId)?.let { binding.tvEventTitle.text = it.title }
+        }
+    }
+
     private fun updateAttendanceMetrics() {
-        val (attended, registered) = repository.getAttendanceCount(eventId)
-        binding.tvAforoStats.text = "Aforo ingresado: $attended / $registered asistentes"
-        if (registered > 0) {
-            val progress = (attended.toFloat() / registered.toFloat() * 100).toInt()
-            binding.progressAforo.progress = progress
+        viewLifecycleOwner.lifecycleScope.launch {
+            val (attended, registered) = repository.getAttendanceCount(eventId)
+            binding.tvAforoStats.text = "Aforo ingresado: $attended / $registered asistentes"
+            if (registered > 0) {
+                val progress = (attended.toFloat() / registered.toFloat() * 100).toInt()
+                binding.progressAforo.progress = progress
+            }
         }
     }
 

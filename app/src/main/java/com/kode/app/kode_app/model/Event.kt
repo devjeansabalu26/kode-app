@@ -26,6 +26,5 @@ data class Event(
 
     fun hasLocation(): Boolean = latitude != null && longitude != null
 
-    fun bannerUrl(): String =
-        if (!imageUrl.isNullOrBlank()) imageUrl else "https://picsum.photos/seed/kode$id/800/400"
+    fun bannerUrl(): String? = imageUrl?.takeIf { it.isNotBlank() }
 }
