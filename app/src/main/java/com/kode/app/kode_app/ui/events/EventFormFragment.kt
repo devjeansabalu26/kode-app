@@ -32,12 +32,14 @@ import com.bumptech.glide.Glide
 import com.google.android.material.chip.Chip
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.core.SessionManager
+import com.kode.app.kode_app.core.goBack
 import com.kode.app.kode_app.core.goToTab
 import com.kode.app.kode_app.core.navigateTo
 import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.data.ImageRepository
 import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.databinding.FragmentEventFormBinding
+import com.kode.app.kode_app.model.Event
 import com.kode.app.kode_app.ui.auth.LoginFragment
 import com.kode.app.kode_app.util.Constantes
 import kotlinx.coroutines.launch
@@ -64,6 +66,9 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     private var selectedImageUri: Uri? = null
+    private var editingEvent: Event? = null
+    private val editEventId: Int get() = arguments?.getInt(ARG_EVENT_ID, -1) ?: -1
+    private val isEditMode: Boolean get() = editEventId > 0
 
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -120,14 +125,16 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
         binding.etStartTime.setOnClickListener { showTimePicker(binding.etStartTime, isStart = true) }
         binding.etEndTime.setOnClickListener { showTimePicker(binding.etEndTime, isStart = false) }
 
-        binding.btnBack.setOnClickListener { navigateToHome() }
-        binding.btnCancel.setOnClickListener { navigateToHome() }
+        binding.btnBack.setOnClickListener { closeForm() }
+        binding.btnCancel.setOnClickListener { closeForm() }
         binding.btnSaveDraft.setOnClickListener { showMessage("Borrador guardado") }
         binding.btnUploadImage.setOnClickListener {
             pickImageLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         }
 
         setupMap()
+
+        if (isEditMode) loadEventForEdit(userId)
 
         binding.btnPublish.setOnClickListener {
             val title = binding.etEventTitle.text.toString().trim()
@@ -162,6 +169,12 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
                 return@setOnClickListener
             }
 
+            val registeredCount = editingEvent?.registeredCount ?: 0
+            if (capacity < registeredCount) {
+                showMessage("La capacidad no puede ser menor a los $registeredCount inscritos")
+                return@setOnClickListener
+            }
+
             if (selectedDateTime.timeInMillis <= System.currentTimeMillis()) {
                 showMessage("La fecha del evento debe ser futura")
                 return@setOnClickListener
@@ -186,7 +199,37 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
                         return@launch
                     }
                 } else {
-                    pastedImageUrl
+                    pastedImageUrl.ifBlank { editingEvent?.imageUrl.orEmpty() }
+                }
+
+                val event = editingEvent
+                if (event != null) {
+                    val saved = eventRepository.updateEvent(
+                        eventId = event.id,
+                        creatorId = creatorId,
+                        title = title,
+                        description = description,
+                        date = databaseDate,
+                        location = location,
+                        category = category,
+                        capacity = capacity,
+                        endTime = selectedEndTime,
+                        eventType = eventType,
+                        isPrivate = isPrivate,
+                        requireDni = requireDni,
+                        isUntransferable = isUntransferable,
+                        latitude = selectedLatLng?.latitude,
+                        longitude = selectedLatLng?.longitude,
+                        imageUrl = imageUrl
+                    )
+                    binding.btnPublish.isEnabled = true
+                    if (!saved) {
+                        showMessage("No se pudieron guardar los cambios")
+                        return@launch
+                    }
+                    showMessage("Evento actualizado correctamente")
+                    goBack()
+                    return@launch
                 }
 
                 val eventId = eventRepository.createEvent(
@@ -334,6 +377,81 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
         Glide.with(this).load(uri).centerCrop().into(binding.ivImagePreview)
     }
 
+    private fun loadEventForEdit(userId: Long) {
+        binding.tvFormStep.text = "MODO EDICIÓN"
+        binding.tvFormTitle.text = "Editar evento"
+        binding.btnPublish.text = "Guardar cambios"
+        binding.btnSaveDraft.isVisible = false
+        binding.btnPublish.isEnabled = false
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val event = eventRepository.getEventById(editEventId)
+            if (event == null || event.creatorId != userId) {
+                showMessage("No puedes editar este evento")
+                goBack()
+                return@launch
+            }
+            editingEvent = event
+            fillForm(event)
+            binding.btnPublish.isEnabled = true
+        }
+    }
+
+    private fun fillForm(event: Event) {
+        binding.etEventTitle.setText(event.title)
+        binding.etEventDescription.setText(event.description)
+        binding.etLocation.setText(event.location)
+        binding.etCapacity.setText(event.capacity.toString())
+
+        listOf(binding.chipTech, binding.chipDesign, binding.chipBusiness, binding.chipMusic)
+            .firstOrNull { it.text.toString().replace("⚡", "").trim().equals(event.category.trim(), ignoreCase = true) }
+            ?.isChecked = true
+
+        binding.toggleEventType.check(
+            when (event.eventType) {
+                "Virtual" -> R.id.btnVirtual
+                "Híbrido" -> R.id.btnHibrido
+                else -> R.id.btnPresencial
+            }
+        )
+        binding.togglePrivacy.check(if (event.isPrivate) R.id.btnPrivado else R.id.btnPublico)
+        binding.etAccessCode.setText(event.accessCode.orEmpty())
+        binding.cbRequireDni.isChecked = event.requireDni
+        binding.cbUntransferable.isChecked = event.isUntransferable
+
+        runCatching { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).parse(event.date) }
+            .getOrNull()?.let { date ->
+                selectedDateTime.time = date
+                dateSelected = true
+                timeSelected = true
+                binding.etEventDate.setText(SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(date))
+                binding.etStartTime.setText(SimpleDateFormat("HH:mm", Locale.getDefault()).format(date) + " hrs")
+            }
+        event.endTime?.takeIf { it.isNotBlank() }?.let {
+            selectedEndTime = it
+            binding.etEndTime.setText("$it hrs")
+        }
+
+        event.bannerUrl()?.let { url ->
+            binding.layoutUploadPlaceholder.isVisible = false
+            binding.ivImagePreview.isVisible = true
+            Glide.with(this).load(url).centerCrop().into(binding.ivImagePreview)
+        }
+
+        if (event.latitude != null && event.longitude != null) {
+            val latLng = LatLng(event.latitude, event.longitude)
+            selectedLatLng = latLng
+            map?.let {
+                it.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
+                selectLocation(latLng)
+            }
+        }
+    }
+
+    private fun closeForm() {
+        if (isEditMode) goBack() else navigateToHome()
+    }
+
     private fun navigateToHome() {
         goToTab(R.id.nav_home)
     }
@@ -344,5 +462,13 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
 
     private fun showMessage(message: String) {
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+    }
+
+    companion object {
+        private const val ARG_EVENT_ID = "EVENT_ID"
+
+        fun editArgs(eventId: Int): Bundle {
+            return Bundle().apply { putInt(ARG_EVENT_ID, eventId) }
+        }
     }
 }

@@ -302,6 +302,9 @@ class EventDetailFragment : Fragment() {
         })
 
         binding.btnQuickScanBanner.setOnClickListener { openQrScanner(event.id) }
+        binding.btnEditEvent.setOnClickListener {
+            navigateTo(R.id.eventEditFragment, EventFormFragment.editArgs(event.id))
+        }
         binding.btnOpenScanner.setOnClickListener { openQrScanner(event.id) }
     }
 

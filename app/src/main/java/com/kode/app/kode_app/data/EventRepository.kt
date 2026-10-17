@@ -110,6 +110,57 @@ class EventRepository {
         id
     }
 
+    suspend fun updateEvent(
+        eventId: Int,
+        creatorId: Long,
+        title: String,
+        description: String,
+        date: String,
+        location: String,
+        category: String,
+        capacity: Int,
+        endTime: String = "",
+        eventType: String = "Presencial",
+        isPrivate: Boolean = false,
+        requireDni: Boolean = false,
+        isUntransferable: Boolean = false,
+        latitude: Double? = null,
+        longitude: Double? = null,
+        imageUrl: String? = null
+    ): Boolean = firestoreCall(false) {
+        val eventRef = events.document(eventId.toString())
+        val current = eventRef.get().await()
+        if (!current.exists() || current.getLong("creatorId") != creatorId) return@firestoreCall false
+
+        val currentCode = current.getString("accessCode").orEmpty()
+        val finalAccessCode = when {
+            !isPrivate -> ""
+            currentCode.isNotEmpty() -> currentCode
+            else -> generateUniqueAccessCode(title)
+        }
+
+        val changes = mapOf(
+            "title" to title.trim(),
+            "description" to description.trim(),
+            "date" to date,
+            "endTime" to endTime,
+            "location" to location.trim(),
+            "category" to category.trim(),
+            "capacity" to capacity,
+            "eventType" to eventType,
+            "isPrivate" to isPrivate,
+            "requireDni" to requireDni,
+            "isUntransferable" to isUntransferable,
+            "accessCode" to finalAccessCode,
+            "latitude" to latitude,
+            "longitude" to longitude,
+            "imageUrl" to imageUrl?.trim()?.ifEmpty { null },
+            "updatedAt" to FirestoreDb.currentDateTime()
+        )
+        eventRef.update(changes).await()
+        true
+    }
+
     private suspend fun generateUniqueAccessCode(title: String): String {
 
         val cleanTitle = title.trim().replace(Regex("[^a-zA-Z0-9]"), "").uppercase(Locale.getDefault())

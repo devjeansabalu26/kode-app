@@ -42,6 +42,12 @@
         tools:layout="@layout/fragment_register" />
 
     <fragment
+        android:id="@+id/eventEditFragment"
+        android:name="com.kode.app.kode_app.ui.events.EventFormFragment"
+        android:label="Editar evento"
+        tools:layout="@layout/fragment_event_form" />
+
+    <fragment
         android:id="@+id/eventDetailFragment"
         android:name="com.kode.app.kode_app.ui.events.EventDetailFragment"
         android:label="Detalle del evento"

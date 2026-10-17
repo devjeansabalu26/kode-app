@@ -421,9 +421,19 @@
                         android:contentDescription="Volver"
                         android:src="@drawable/ic_arrow_back" />
 
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnEditEvent"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:text="✏ Editar"
+                        android:textAllCaps="false" />
+
                     <TextView
                         android:id="@+id/tvTagPortal"
                         android:layout_width="wrap_content"
+                        android:layout_toStartOf="@id/btnEditEvent"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
                         android:layout_toEndOf="@id/btnBackPortal"
@@ -435,6 +445,7 @@
                     <TextView
                         android:id="@+id/tvTitleManagement"
                         android:layout_width="wrap_content"
+                        android:layout_toStartOf="@id/btnEditEvent"
                         android:layout_height="wrap_content"
                         android:layout_alignStart="@id/tvTagPortal"
                         android:layout_below="@id/tvTagPortal"
@@ -446,6 +457,7 @@
                     <TextView
                         android:id="@+id/tvEventSubtitle"
                         android:layout_width="wrap_content"
+                        android:layout_toStartOf="@id/btnEditEvent"
                         android:layout_height="wrap_content"
                         android:layout_alignStart="@id/tvTagPortal"
                         android:layout_below="@id/tvTitleManagement"
