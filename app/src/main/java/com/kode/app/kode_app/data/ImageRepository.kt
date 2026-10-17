@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import retrofit2.HttpException
 import java.io.ByteArrayOutputStream
 
 class ImageRepository(private val context: Context) {
@@ -35,6 +36,9 @@ class ImageRepository(private val context: Context) {
             ).secureUrl
         } catch (e: CancellationException) {
             throw e
+        } catch (e: HttpException) {
+            Log.e("Cloudinary", "Error al subir imagen: ${e.response()?.errorBody()?.string()}", e)
+            null
         } catch (e: Exception) {
             Log.e("Cloudinary", "Error al subir imagen", e)
             null
