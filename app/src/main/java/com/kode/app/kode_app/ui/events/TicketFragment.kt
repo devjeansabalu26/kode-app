@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
@@ -16,6 +17,7 @@ import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.data.RegistrationRepository
 import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.databinding.FragmentTicketBinding
+import kotlinx.coroutines.launch
 
 class TicketFragment : Fragment() {
 
@@ -38,30 +40,32 @@ class TicketFragment : Fragment() {
         val eventTitle = arguments?.getString(ARG_EVENT_TITLE).orEmpty()
         val qrCodeParam = arguments?.getString(ARG_QR_CODE).orEmpty()
 
-        val eventRepository = EventRepository(requireContext())
-        val userRepository = UserRepository(requireContext())
+        val eventRepository = EventRepository()
+        val userRepository = UserRepository()
         val sessionManager = SessionManager(requireContext())
 
-        val event = eventRepository.getEventById(eventId)
-        val user = sessionManager.getUserId().let { userRepository.getUserById(it) }
+        viewLifecycleOwner.lifecycleScope.launch {
+            val event = eventRepository.getEventById(eventId)
+            val user = sessionManager.getUserId().let { userRepository.getUserById(it) }
 
-        if (event != null && user != null) {
-            binding.tvTicketCategory.text = event.category.uppercase()
-            binding.tvTicketEvent.text = if (eventTitle.isNotEmpty()) eventTitle else event.title
-            binding.tvTicketUser.text = user.name
+            if (event != null && user != null) {
+                binding.tvTicketCategory.text = event.category.uppercase()
+                binding.tvTicketEvent.text = if (eventTitle.isNotEmpty()) eventTitle else event.title
+                binding.tvTicketUser.text = user.name
 
-            val finalCode = qrCodeParam.ifEmpty {
-                RegistrationRepository(requireContext()).getRegistrationQr(event.id, user.id).orEmpty()
+                val finalCode = qrCodeParam.ifEmpty {
+                    RegistrationRepository().getRegistrationQr(event.id, user.id).orEmpty()
+                }
+                if (finalCode.isNotEmpty()) {
+                    binding.tvTicketCode.text = "Acceso General • ID: #$finalCode"
+                    binding.ivTicketQR.setImageBitmap(generateQrBitmap(finalCode))
+                } else {
+                    binding.tvTicketCode.text = "Aún no estás inscrito en este evento"
+                }
+
+                binding.tvTicketDate.text = event.date
+                binding.tvTicketTime.text = if (!event.endTime.isNullOrEmpty()) event.endTime else "Hora fijada"
             }
-            if (finalCode.isNotEmpty()) {
-                binding.tvTicketCode.text = "Acceso General • ID: #$finalCode"
-                binding.ivTicketQR.setImageBitmap(generateQrBitmap(finalCode))
-            } else {
-                binding.tvTicketCode.text = "Aún no estás inscrito en este evento"
-            }
-
-            binding.tvTicketDate.text = event.date
-            binding.tvTicketTime.text = if (!event.endTime.isNullOrEmpty()) event.endTime else "Hora fijada"
         }
 
         binding.btnBack.setOnClickListener {

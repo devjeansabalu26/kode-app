@@ -113,25 +113,6 @@
                     android:textAllCaps="false"
                     android:textColor="#374151"
                     android:textSize="12sp" />
-
-                <Button
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:layout_marginEnd="8dp"
-                    android:text="Tecnología"
-                    android:textAllCaps="false"
-                    android:textColor="#374151"
-                    android:textSize="12sp" />
-
-                <Button
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:text="Música"
-                    android:textAllCaps="false"
-                    android:textColor="#374151"
-                    android:textSize="12sp" />
             </LinearLayout>
         </HorizontalScrollView>
 

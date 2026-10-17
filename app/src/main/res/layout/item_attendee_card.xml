@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -27,7 +28,7 @@
                 android:layout_height="42dp"
                 android:background="@drawable/bg_circle_avatar"
                 android:gravity="center"
-                android:text="MS"
+                tools:text="MS"
                 android:textColor="#1E3A8A"
                 android:textSize="15sp"
                 android:textStyle="bold" />
@@ -43,7 +44,7 @@
                     android:id="@+id/tvAttendeeName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Mateo Silva Ruiz"
+                    tools:text="Mateo Silva Ruiz"
                     android:textColor="#111827"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -52,7 +53,7 @@
                     android:id="@+id/tvAttendeeDetails"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="26 años · Masculino"
+                    tools:text="26 años · Masculino"
                     android:textColor="#6B7280"
                     android:textSize="13sp" />
             </LinearLayout>
@@ -65,7 +66,7 @@
                 android:background="#EFF6FF"
                 android:paddingHorizontal="10dp"
                 android:paddingVertical="4dp"
-                android:text="EVT-7K42P"
+                tools:text="EVT-7K42P"
                 android:textColor="#2563EB"
                 android:textSize="12sp"
                 android:textStyle="bold" />

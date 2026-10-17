@@ -102,7 +102,7 @@
                             android:background="#374151"
                             android:paddingHorizontal="8dp"
                             android:paddingVertical="4dp"
-                            android:text="CÓDIGO: KODE-2026"
+                            tools:text="CÓDIGO: KODE-2026"
                             android:textColor="#FFFFFF"
                             android:textSize="10sp"
                             android:textStyle="bold" />
@@ -112,7 +112,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_alignParentBottom="true"
-                            android:text="📡 Presencial"
+                            tools:text="📡 Presencial"
                             android:textColor="#9CA3AF"
                             android:textSize="11sp" />
 
@@ -138,7 +138,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="TECNOLOGÍA"
+                    tools:text="TECNOLOGÍA"
                     android:textColor="#2563EB"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -148,7 +148,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Nombre del Evento"
+                    tools:text="Nombre del Evento"
                     android:textColor="#111827"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -172,7 +172,7 @@
                             android:id="@+id/tvDetailDate"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="📅 Fecha por confirmar"
+                            tools:text="📅 Fecha por confirmar"
                             android:textColor="#111827"
                             android:textSize="13sp"
                             android:textStyle="bold" />
@@ -182,7 +182,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="🕒 18:00 - 21:00 hrs"
+                            tools:text="🕒 18:00 - 21:00 hrs"
                             android:textColor="#374151"
                             android:textSize="12sp" />
 
@@ -191,7 +191,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="📍 Lugar / Dirección"
+                            tools:text="📍 Lugar / Dirección"
                             android:textColor="#4B5563"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -336,7 +336,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Descripción detallada del evento."
+                    tools:text="Descripción detallada del evento."
                     android:textColor="#4B5563"
                     android:textSize="13sp" />
 
@@ -425,7 +425,7 @@
                         android:layout_height="wrap_content"
                         android:layout_below="@id/tvTitleManagement"
                         android:layout_marginTop="2dp"
-                        android:text="📅 Evento"
+                        tools:text="📅 Evento"
                         android:textColor="#6B7280"
                         android:textSize="13sp" />
                 </RelativeLayout>

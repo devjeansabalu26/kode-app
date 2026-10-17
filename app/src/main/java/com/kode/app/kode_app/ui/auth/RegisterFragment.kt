@@ -12,6 +12,7 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.databinding.FragmentRegisterBinding
 import com.kode.app.kode_app.core.SessionManager
@@ -20,6 +21,7 @@ import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.core.goToTab
 import com.kode.app.kode_app.core.navigateTo
 import com.kode.app.kode_app.ui.events.TicketFragment
+import kotlinx.coroutines.launch
 class RegisterFragment :
     Fragment() {
     private var _binding: FragmentRegisterBinding? = null
@@ -91,24 +93,31 @@ class RegisterFragment :
                     showMessage("La contraseña debe tener al menos 6 caracteres")
                     return@setOnClickListener
                 }
-                val userRepository = UserRepository(requireContext())
-                if (userRepository.userExistsByEmail(email)) {
-                    showMessage("Este correo ya está registrado")
-                    return@setOnClickListener
+                btnRegister.isEnabled = false
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        val userRepository = UserRepository()
+                        if (userRepository.userExistsByEmail(email)) {
+                            showMessage("Este correo ya está registrado")
+                            return@launch
+                        }
+                        if (userRepository.userExistsByDni(dni)) {
+                            showMessage("Este DNI ya está registrado")
+                            return@launch
+                        }
+                        val userId =
+                            userRepository.registerUser(name = name, dni = dni, phone = phone, gender = gender, age = age, email = email, password = password)
+                        if (userId == -1L) {
+                            showMessage("No se pudo crear la cuenta")
+                            return@launch
+                        }
+                        SessionManager(requireContext()).createSession(userId = userId, name = name, email = email.lowercase())
+                        showMessage("Cuenta creada correctamente")
+                        continuePendingAction(RegistrationRepository(), userId)
+                    } finally {
+                        _binding?.btnRegister?.isEnabled = true
+                    }
                 }
-                if (userRepository.userExistsByDni(dni)) {
-                    showMessage("Este DNI ya está registrado")
-                    return@setOnClickListener
-                }
-                val userId =
-                    userRepository.registerUser(name = name, dni = dni, phone = phone, gender = gender, age = age, email = email, password = password)
-                if (userId == -1L) {
-                    showMessage("No se pudo crear la cuenta")
-                    return@setOnClickListener
-                }
-                SessionManager(requireContext()).createSession(userId = userId, name = name, email = email.lowercase())
-                showMessage("Cuenta creada correctamente")
-                continuePendingAction(RegistrationRepository(requireContext()), userId)
             }
         tvGoLogin.setOnClickListener {
             navigateTo(
@@ -122,7 +131,7 @@ class RegisterFragment :
         }
     }
 
-    private fun continuePendingAction(registrationRepository: RegistrationRepository, userId: Long) {
+    private suspend fun continuePendingAction(registrationRepository: RegistrationRepository, userId: Long) {
         when (arguments?.getString(ARG_DESTINATION)) {
             "REGISTER_EVENT" -> {
                 val eventId = arguments?.getInt(ARG_EVENT_ID) ?: return

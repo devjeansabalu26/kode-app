@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "109113285681",
+    "project_id": "kode-e94b8",
+    "storage_bucket": "kode-e94b8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:109113285681:android:f8ce11e7e74d9d386bc910",
+        "android_client_info": {
+          "package_name": "com.kode.app.kode_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCfdfnU2lkmHamp11FVx3DlVMsycjPtUzg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,6 +1,7 @@
 package com.kode.app.kode_app.core
 
 import android.content.Context
+import com.google.firebase.auth.FirebaseAuth
 
 class SessionManager(context: Context) {
     private val preferences = context.getSharedPreferences("kode_session", Context.MODE_PRIVATE)
@@ -12,7 +13,7 @@ class SessionManager(context: Context) {
     fun isLoggedIn(): Boolean {
         val loggedIn = preferences.getBoolean("logged_in", false)
         val userId = preferences.getLong("user_id", -1L)
-        return loggedIn && userId > 0
+        return loggedIn && userId > 0 && FirebaseAuth.getInstance().currentUser != null
     }
 
     fun getUserId(): Long {
@@ -31,6 +32,7 @@ class SessionManager(context: Context) {
     }
 
     fun logout() {
+        FirebaseAuth.getInstance().signOut()
         preferences.edit().clear().apply()
     }
 }

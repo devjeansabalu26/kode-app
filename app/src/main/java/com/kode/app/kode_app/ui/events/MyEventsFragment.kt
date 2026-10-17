@@ -9,6 +9,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.tabs.TabLayout
@@ -22,6 +23,8 @@ import com.kode.app.kode_app.model.Event
 import com.kode.app.kode_app.core.goToTab
 import com.kode.app.kode_app.core.navigateTo
 import com.kode.app.kode_app.ui.auth.LoginFragment
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 class MyEventsFragment : Fragment() {
     private var _binding: FragmentMyEventsBinding? = null
@@ -42,6 +45,8 @@ class MyEventsFragment : Fragment() {
 
     private lateinit var btnEmptyAction: Button
 
+    private var loadJob: Job? = null
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentMyEventsBinding.inflate(inflater, container, false)
         return binding.root
@@ -55,23 +60,37 @@ class MyEventsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         session = SessionManager(requireContext())
-        userRepository = UserRepository(requireContext())
-        eventRepository = EventRepository(requireContext())
+        userRepository = UserRepository()
+        eventRepository = EventRepository()
         recyclerView = binding.rvMyEvents
         layoutEmpty = binding.layoutEmpty
         tvEmpty = binding.tvEmpty
         btnEmptyAction = binding.btnEmptyAction
-        val tabs = binding.tabMyEvents
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        if (!session.isLoggedIn() || userRepository.getUserById(session.getUserId()) == null) {
-            session.logout()
-            tabs.visibility = View.GONE
-            binding.swipeRefreshMyEvents.isEnabled = false
-            showEmpty(message = "Inicia sesión para ver tus eventos", actionText = "Iniciar sesión") {
-                navigateTo(R.id.loginFragment, LoginFragment.args(destination = "MY_EVENTS"))
-            }
+        if (!session.isLoggedIn()) {
+            showLoggedOut()
             return
         }
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (userRepository.getUserById(session.getUserId()) == null) {
+                showLoggedOut()
+                return@launch
+            }
+            setupTabs()
+        }
+    }
+
+    private fun showLoggedOut() {
+        session.logout()
+        binding.tabMyEvents.visibility = View.GONE
+        binding.swipeRefreshMyEvents.isEnabled = false
+        showEmpty(message = "Inicia sesión para ver tus eventos", actionText = "Iniciar sesión") {
+            navigateTo(R.id.loginFragment, LoginFragment.args(destination = "MY_EVENTS"))
+        }
+    }
+
+    private fun setupTabs() {
+        val tabs = binding.tabMyEvents
         tabs.addTab(tabs.newTab().setText("Asistiré"))
         tabs.addTab(tabs.newTab().setText("Organizados"))
         tabs.addOnTabSelectedListener(
@@ -91,28 +110,31 @@ class MyEventsFragment : Fragment() {
         }
         binding.swipeRefreshMyEvents.setOnRefreshListener {
             showTab(tabs.selectedTabPosition.coerceAtLeast(0))
-            binding.swipeRefreshMyEvents.isRefreshing = false
         }
     }
 
     private fun showTab(position: Int) {
         val userId = session.getUserId()
-        if (position == 0) {
-            showEvents(
-                events = eventRepository.getEventsRegisteredByUser(userId),
-                emptyMessage = "Aún no te has inscrito a ningún evento",
-                actionText = "Explorar eventos"
-            ) {
-                goToTab(R.id.nav_home)
+        loadJob?.cancel()
+        loadJob = viewLifecycleOwner.lifecycleScope.launch {
+            if (position == 0) {
+                showEvents(
+                    events = eventRepository.getEventsRegisteredByUser(userId),
+                    emptyMessage = "Aún no te has inscrito a ningún evento",
+                    actionText = "Explorar eventos"
+                ) {
+                    goToTab(R.id.nav_home)
+                }
+            } else {
+                showEvents(
+                    events = eventRepository.getEventsCreatedByUser(userId),
+                    emptyMessage = "Aún no has creado ningún evento",
+                    actionText = "+ Crear evento"
+                ) {
+                    goToTab(R.id.nav_create_event)
+                }
             }
-        } else {
-            showEvents(
-                events = eventRepository.getEventsCreatedByUser(userId),
-                emptyMessage = "Aún no has creado ningún evento",
-                actionText = "+ Crear evento"
-            ) {
-                goToTab(R.id.nav_create_event)
-            }
+            binding.swipeRefreshMyEvents.isRefreshing = false
         }
     }
 

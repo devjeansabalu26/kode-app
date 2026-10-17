@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.core.SessionManager
 import com.kode.app.kode_app.data.RegistrationRepository
@@ -15,6 +16,7 @@ import com.kode.app.kode_app.core.goToTab
 import com.kode.app.kode_app.core.navigateTo
 import com.kode.app.kode_app.ui.events.TicketFragment
 import androidx.navigation.fragment.findNavController
+import kotlinx.coroutines.launch
 
 class LoginFragment : Fragment() {
 
@@ -45,37 +47,42 @@ class LoginFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            val userRepository = UserRepository(requireContext())
+            binding.btnLogin.isEnabled = false
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val user = UserRepository().login(email, password)
 
-            val user = userRepository.login(email, password)
+                    if (user != null) {
 
-            if (user != null) {
-
-                SessionManager(requireContext()).createSession(
-                    userId = user.id,
-                    name = user.name,
-                    email = user.email
-                )
-                Toast.makeText(requireContext(), "¡Bienvenido, ${user.name}!", Toast.LENGTH_SHORT).show()
-
-                if (destination == "REGISTER_EVENT" && eventId > 0) {
-                    val qrCode = RegistrationRepository(requireContext()).registerUserInEvent(eventId, user.id)
-                    if (qrCode != null) {
-                        navigateTo(
-                            R.id.ticketFragment,
-                            TicketFragment.args(eventId = eventId, eventTitle = eventTitle, qrCode = qrCode),
-                            popUpToId = R.id.eventDetailFragment
+                        SessionManager(requireContext()).createSession(
+                            userId = user.id,
+                            name = user.name,
+                            email = user.email
                         )
-                    } else {
-                        Toast.makeText(requireContext(), "No se pudo completar la inscripción", Toast.LENGTH_SHORT).show()
-                        findNavController().popBackStack()
-                    }
-                    return@setOnClickListener
-                }
+                        Toast.makeText(requireContext(), "¡Bienvenido, ${user.name}!", Toast.LENGTH_SHORT).show()
 
-                goToTab(R.id.nav_my_events)
-            } else {
-                Toast.makeText(requireContext(), "Correo o contraseña incorrectos", Toast.LENGTH_SHORT).show()
+                        if (destination == "REGISTER_EVENT" && eventId > 0) {
+                            val qrCode = RegistrationRepository().registerUserInEvent(eventId, user.id)
+                            if (qrCode != null) {
+                                navigateTo(
+                                    R.id.ticketFragment,
+                                    TicketFragment.args(eventId = eventId, eventTitle = eventTitle, qrCode = qrCode),
+                                    popUpToId = R.id.eventDetailFragment
+                                )
+                            } else {
+                                Toast.makeText(requireContext(), "No se pudo completar la inscripción", Toast.LENGTH_SHORT).show()
+                                findNavController().popBackStack()
+                            }
+                            return@launch
+                        }
+
+                        goToTab(R.id.nav_my_events)
+                    } else {
+                        Toast.makeText(requireContext(), "Correo o contraseña incorrectos", Toast.LENGTH_SHORT).show()
+                    }
+                } finally {
+                    _binding?.btnLogin?.isEnabled = true
+                }
             }
         }
 

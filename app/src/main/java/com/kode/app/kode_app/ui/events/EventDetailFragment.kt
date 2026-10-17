@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -28,6 +29,7 @@ import com.kode.app.kode_app.retrofit.ClienteClimaRetrofit
 import com.kode.app.kode_app.ui.auth.LoginFragment
 import com.kode.app.kode_app.retrofit.response.ClimaResponse
 import com.kode.app.kode_app.util.Constantes
+import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -65,8 +67,8 @@ class EventDetailFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        eventRepository = EventRepository(requireContext())
-        registrationRepository = RegistrationRepository(requireContext())
+        eventRepository = EventRepository()
+        registrationRepository = RegistrationRepository()
         session = SessionManager(requireContext())
 
         val eventId = arguments?.getInt(ARG_ID, -1) ?: -1
@@ -75,31 +77,33 @@ class EventDetailFragment : Fragment() {
             return
         }
 
-        val event = eventRepository.getEventById(eventId)
-        if (event == null) {
-            showMessage("El evento no existe")
-            return
-        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            val event = eventRepository.getEventById(eventId)
+            if (event == null) {
+                showMessage("El evento no existe")
+                return@launch
+            }
 
-        val currentUserId = if (session.isLoggedIn()) session.getUserId() else -1L
-        val isCreator = currentUserId > 0 && event.creatorId != null && event.creatorId == currentUserId
+            val currentUserId = if (session.isLoggedIn()) session.getUserId() else -1L
+            val isCreator = currentUserId > 0 && event.creatorId != null && event.creatorId == currentUserId
 
-        if (isCreator) {
-            binding.containerPublicDetail.isVisible = false
-            binding.bottomActionContainer.isVisible = false
-            binding.containerOrganizerPortal.isVisible = true
+            if (isCreator) {
+                binding.containerPublicDetail.isVisible = false
+                binding.bottomActionContainer.isVisible = false
+                binding.containerOrganizerPortal.isVisible = true
 
-            setupCreatorDashboard(event)
-        } else {
-            binding.containerPublicDetail.isVisible = true
-            binding.bottomActionContainer.isVisible = true
-            binding.containerOrganizerPortal.isVisible = false
+                setupCreatorDashboard(event)
+            } else {
+                binding.containerPublicDetail.isVisible = true
+                binding.bottomActionContainer.isVisible = true
+                binding.containerOrganizerPortal.isVisible = false
 
-            setupParticipantView(event)
+                setupParticipantView(event)
+            }
         }
     }
 
-    private fun setupParticipantView(event: Event) {
+    private suspend fun setupParticipantView(event: Event) {
         binding.tvCategoryLabel.text = event.category.uppercase()
         binding.tvDetailTitle.text = event.title
         binding.tvDetailDescription.text = event.description
@@ -165,20 +169,26 @@ class EventDetailFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            val qrCode = registrationRepository.registerUserInEvent(event.id, session.getUserId())
-            if (qrCode == null) {
-                showMessage("No se pudo completar la inscripción")
-                return@setOnClickListener
-            }
+            binding.btnRegister.isEnabled = false
+            viewLifecycleOwner.lifecycleScope.launch {
+                val qrCode = registrationRepository.registerUserInEvent(event.id, session.getUserId())
+                binding.btnRegister.isEnabled = true
+                if (qrCode == null) {
+                    showMessage("No se pudo completar la inscripción")
+                    return@launch
+                }
 
-            if (!alreadyRegistered) showMessage("¡Inscripción confirmada!")
-            navigateTo(R.id.ticketFragment, TicketFragment.args(eventId = event.id, eventTitle = event.title, qrCode = qrCode))
+                if (!alreadyRegistered) showMessage("¡Inscripción confirmada!")
+                navigateTo(R.id.ticketFragment, TicketFragment.args(eventId = event.id, eventTitle = event.title, qrCode = qrCode))
+            }
         }
     }
 
     private fun loadBanner(event: Event) {
         Glide.with(this)
             .load(event.bannerUrl())
+            .placeholder(android.R.drawable.ic_menu_gallery)
+            .error(android.R.drawable.ic_menu_gallery)
             .centerCrop()
             .into(binding.ivDetailBanner)
     }
@@ -194,7 +204,7 @@ class EventDetailFragment : Fragment() {
         )
         childFragmentManager.beginTransaction()
             .replace(R.id.mapDetailContainer, mapFragment)
-            .commit()
+            .commitAllowingStateLoss()
 
         mapFragment.getMapAsync { map ->
             map.addMarker(MarkerOptions().position(position).title(event.location))
@@ -264,10 +274,12 @@ class EventDetailFragment : Fragment() {
         updateDashboardMetrics(event)
 
         attendeeAdapter = AttendeeAdapter(emptyList()) { attendee, newStatus ->
-            registrationRepository.updateAttendanceStatus(event.id, attendee.user.id, newStatus)
+            viewLifecycleOwner.lifecycleScope.launch {
+                registrationRepository.updateAttendanceStatus(event.id, attendee.user.id, newStatus)
 
-            eventRepository.getEventById(event.id)?.let { updatedEvent ->
-                updateDashboardMetrics(updatedEvent)
+                eventRepository.getEventById(event.id)?.let { updatedEvent ->
+                    updateDashboardMetrics(updatedEvent)
+                }
             }
         }
 
@@ -291,8 +303,10 @@ class EventDetailFragment : Fragment() {
     }
 
     private fun loadAttendees(eventId: Int) {
-        fullAttendeeList = registrationRepository.getAttendeesForEvent(eventId)
-        attendeeAdapter.updateData(fullAttendeeList)
+        viewLifecycleOwner.lifecycleScope.launch {
+            fullAttendeeList = registrationRepository.getAttendeesForEvent(eventId)
+            filterAttendees(binding.etSearchAttendee.text.toString())
+        }
     }
 
     private fun filterAttendees(query: String) {

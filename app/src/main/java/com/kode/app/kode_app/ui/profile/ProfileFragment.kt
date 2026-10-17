@@ -42,7 +42,7 @@ class ProfileFragment : Fragment() {
             openLogin()
             return
         }
-        val userRepository = UserRepository(requireContext())
+        val userRepository = UserRepository()
         userRepository.observeUser(userId).observe(viewLifecycleOwner) { user ->
             if (user == null) {
                 session.logout()

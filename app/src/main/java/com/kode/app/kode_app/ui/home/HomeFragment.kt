@@ -11,6 +11,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.components.EventAdapter
@@ -21,6 +22,9 @@ import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.databinding.FragmentHomeBinding
 import com.kode.app.kode_app.model.Event
 import com.kode.app.kode_app.ui.events.EventDetailFragment
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -34,9 +38,10 @@ class HomeFragment : Fragment() {
 
     private lateinit var eventRepository: EventRepository
 
-    private var allEvents: List<Event> = emptyList()
     private var filteredEvents: List<Event> = emptyList()
     private var currentFilter: String = FILTER_ALL
+    private var filtersJob: Job? = null
+    private var eventsJob: Job? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -50,19 +55,21 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        eventRepository = EventRepository(requireContext())
+        eventRepository = EventRepository()
 
         binding.rvEvents.layoutManager = LinearLayoutManager(requireContext())
 
-        loadEvents()
+        applyFilters()
         loadFilters()
         configureSearch()
         configureActionButtons()
 
         binding.swipeRefreshHome.setOnRefreshListener {
-            loadFilters()
-            applyFilters()
-            binding.swipeRefreshHome.isRefreshing = false
+            val jobs = listOf(loadFilters(), applyFilters())
+            viewLifecycleOwner.lifecycleScope.launch {
+                jobs.joinAll()
+                binding.swipeRefreshHome.isRefreshing = false
+            }
         }
     }
 
@@ -91,12 +98,13 @@ class HomeFragment : Fragment() {
             .setPositiveButton("Acceder") { dialog, _ ->
                 val code = input.text.toString().trim()
                 if (code.isNotEmpty()) {
-                    // Busca directo por código (sea privado o público)
-                    val event = eventRepository.getEventByAccessCode(code)
-                    if (event != null) {
-                        navigateTo(R.id.eventDetailFragment, EventDetailFragment.args(event))
-                    } else {
-                        Toast.makeText(requireContext(), "Código no válido o evento inexistente", Toast.LENGTH_SHORT).show()
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        val event = eventRepository.getEventByAccessCode(code)
+                        if (event != null) {
+                            navigateTo(R.id.eventDetailFragment, EventDetailFragment.args(event))
+                        } else {
+                            Toast.makeText(requireContext(), "Código no válido o evento inexistente", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 } else {
                     Toast.makeText(requireContext(), "Ingresa un código de acceso", Toast.LENGTH_SHORT).show()
@@ -109,32 +117,28 @@ class HomeFragment : Fragment() {
             .show()
     }
 
-    private fun loadEvents() {
-        // Carga únicamente eventos públicos
-        allEvents = eventRepository.getPublicEvents()
-        filteredEvents = allEvents
-        showEvents(filteredEvents)
-    }
+    private fun loadFilters(): Job {
+        filtersJob?.cancel()
+        return viewLifecycleOwner.lifecycleScope.launch {
+            val categories = eventRepository.getCategories()
+            binding.filtersContainer.removeAllViews()
 
-    private fun loadFilters() {
-        binding.filtersContainer.removeAllViews()
-
-        addFilterButton(text = "Todos") {
-            currentFilter = FILTER_ALL
-            applyFilters()
-        }
-        addFilterButton(text = "Esta semana") {
-            currentFilter = FILTER_THIS_WEEK
-            applyFilters()
-        }
-
-        val categories = eventRepository.getCategories()
-        categories.forEach { category ->
-            addFilterButton(text = category) {
-                currentFilter = category
+            addFilterButton(text = "Todos") {
+                currentFilter = FILTER_ALL
                 applyFilters()
             }
-        }
+            addFilterButton(text = "Esta semana") {
+                currentFilter = FILTER_THIS_WEEK
+                applyFilters()
+            }
+
+            categories.forEach { category ->
+                addFilterButton(text = category) {
+                    currentFilter = category
+                    applyFilters()
+                }
+            }
+        }.also { filtersJob = it }
     }
 
     private fun addFilterButton(text: String, onClick: () -> Unit) {
@@ -154,13 +158,16 @@ class HomeFragment : Fragment() {
         binding.filtersContainer.addView(button)
     }
 
-    private fun applyFilters() {
-        filteredEvents = when (currentFilter) {
-            FILTER_ALL -> eventRepository.getPublicEvents()
-            FILTER_THIS_WEEK -> eventRepository.getPublicEvents().filter { isEventThisWeek(it.date) }
-            else -> eventRepository.getEventsByCategory(currentFilter)
-        }
-        applySearch()
+    private fun applyFilters(): Job {
+        eventsJob?.cancel()
+        return viewLifecycleOwner.lifecycleScope.launch {
+            filteredEvents = when (currentFilter) {
+                FILTER_ALL -> eventRepository.getPublicEvents()
+                FILTER_THIS_WEEK -> eventRepository.getPublicEvents().filter { isEventThisWeek(it.date) }
+                else -> eventRepository.getEventsByCategory(currentFilter)
+            }
+            applySearch()
+        }.also { eventsJob = it }
     }
 
     private fun configureSearch() {

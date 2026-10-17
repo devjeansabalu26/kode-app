@@ -1,40 +1,62 @@
 package com.kode.app.kode_app.data
 
-import android.content.Context
-import com.kode.app.kode_app.db.KodeRoomDatabase
-import com.kode.app.kode_app.db.entity.EventEntity
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.Query
 import com.kode.app.kode_app.model.Event
-import java.text.SimpleDateFormat
-import java.util.Date
+import kotlinx.coroutines.tasks.await
 import java.util.Locale
 import kotlin.random.Random
 
-class EventRepository(context: Context) {
-    private val eventDao = KodeRoomDatabase.getDatabase(context).eventDao()
-    private val users = UserRepository(context)
+class EventRepository {
+    private val events = FirestoreDb.db.collection(FirestoreDb.EVENTS)
+    private val registrations = FirestoreDb.db.collection(FirestoreDb.REGISTRATIONS)
+    private val users = UserRepository()
+    private val published: Query get() = events.whereEqualTo("status", STATUS_PUBLISHED)
+    private val publicEvents: Query get() = published.whereEqualTo("isPrivate", false)
 
-    fun getEvents(): List<Event> = eventDao.listarTodos()
+    suspend fun getEvents(): List<Event> = fetch(published)
 
+    suspend fun getPublicEvents(): List<Event> = fetch(publicEvents)
 
-    fun getPublicEvents(): List<Event> = eventDao.listarPublicos()
+    suspend fun getEventById(eventId: Int): Event? = firestoreCall(null) {
+        events.document(eventId.toString()).get().await()
+            .takeIf { it.exists() && it.getString("status") == STATUS_PUBLISHED }
+            ?.toEvent()
+    }
 
-    fun getEventById(eventId: Int): Event? = eventDao.obtenerPorId(eventId)
+    suspend fun getEventByAccessCode(code: String): Event? = firestoreCall(null) {
+        published.whereEqualTo("accessCode", code.trim()).limit(1).get().await()
+            .documents.firstOrNull()?.toEvent()
+    }
 
+    suspend fun getEventsByCategory(category: String): List<Event> =
+        fetch(publicEvents.whereEqualTo("category", category))
 
-    fun getEventByAccessCode(code: String): Event? = eventDao.obtenerPorCodigo(code.trim())
+    suspend fun getEventsCreatedByUser(userId: Long): List<Event> =
+        fetch(published.whereEqualTo("creatorId", userId))
 
+    suspend fun getEventsRegisteredByUser(userId: Long): List<Event> = firestoreCall(emptyList()) {
+        val eventIds = registrations.whereEqualTo("userId", userId).get().await()
+            .documents.mapNotNull { it.getLong("eventId") }
+        FirestoreDb.getByIds(FirestoreDb.EVENTS, eventIds)
+            .filter { it.getString("status") == STATUS_PUBLISHED }
+            .map { it.toEvent() }
+            .sortedBy { it.date }
+    }
 
-    fun getEventsByCategory(category: String): List<Event> = eventDao.listarPorCategoria(category)
+    suspend fun getCategories(): List<String> {
+        return getPublicEvents()
+            .map { it.category.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .sorted()
+    }
 
-    fun getEventsCreatedByUser(userId: Long): List<Event> = eventDao.listarCreadosPor(userId)
+    suspend fun eventExists(eventId: Int): Boolean = firestoreCall(false) {
+        events.document(eventId.toString()).get().await().exists()
+    }
 
-    fun getEventsRegisteredByUser(userId: Long): List<Event> = eventDao.listarInscritosPor(userId)
-
-    fun getCategories(): List<String> = eventDao.listarCategorias()
-
-    fun eventExists(eventId: Int): Boolean = eventDao.existe(eventId)
-
-    fun createEvent(
+    suspend fun createEvent(
         creatorId: Long,
         title: String,
         description: String,
@@ -51,44 +73,44 @@ class EventRepository(context: Context) {
         latitude: Double? = null,
         longitude: Double? = null,
         imageUrl: String? = null
-    ): Long {
-        if (creatorId <= 0 || users.getUserById(creatorId) == null) return -1L
+    ): Long = firestoreCall(-1L) {
+        if (creatorId <= 0 || users.getUserById(creatorId) == null) return@firestoreCall -1L
 
-        // Generar código único even priv
         val finalAccessCode = if (isPrivate) {
             generateUniqueAccessCode(title)
         } else {
             ""
         }
 
-        val event = EventEntity(
-            creatorId = creatorId,
-            title = title.trim(),
-            description = description.trim(),
-            date = date,
-            endTime = endTime,
-            location = location.trim(),
-            category = category.trim(),
-            capacity = capacity,
-            eventType = eventType,
-            isPrivate = isPrivate,
-            requireDni = requireDni,
-            isUntransferable = isUntransferable,
-            accessCode = finalAccessCode,
-            latitude = latitude,
-            longitude = longitude,
-            imageUrl = imageUrl?.trim()?.ifEmpty { null },
-            status = "PUBLISHED",
-            createdAt = currentDateTime()
+        val id = FirestoreDb.nextId(FirestoreDb.EVENTS)
+        val event = mapOf(
+            "id" to id,
+            "creatorId" to creatorId,
+            "title" to title.trim(),
+            "description" to description.trim(),
+            "date" to date,
+            "endTime" to endTime,
+            "location" to location.trim(),
+            "category" to category.trim(),
+            "capacity" to capacity,
+            "eventType" to eventType,
+            "isPrivate" to isPrivate,
+            "requireDni" to requireDni,
+            "isUntransferable" to isUntransferable,
+            "accessCode" to finalAccessCode,
+            "latitude" to latitude,
+            "longitude" to longitude,
+            "imageUrl" to imageUrl?.trim()?.ifEmpty { null },
+            "status" to STATUS_PUBLISHED,
+            "registeredCount" to 0,
+            "attendedCount" to 0,
+            "createdAt" to FirestoreDb.currentDateTime()
         )
-        return eventDao.insertar(event)
+        events.document(id.toString()).set(event).await()
+        id
     }
 
-    /**
-     * Genera un código automático único basado en las 3 primeras letras del título + 3 dígitos aleatorios ojo acaaaaaaaa.
-     * Ejemplo: "Cibercafe inaguracion" -> "CIB123"
-     * Verifica que el código no exista previamente en la base de datos */
-    private fun generateUniqueAccessCode(title: String): String {
+    private suspend fun generateUniqueAccessCode(title: String): String {
 
         val cleanTitle = title.trim().replace(Regex("[^a-zA-Z0-9]"), "").uppercase(Locale.getDefault())
         val prefix = when {
@@ -101,12 +123,40 @@ class EventRepository(context: Context) {
         do {
             val randomNumber = Random.nextInt(100, 1000)
             candidateCode = "$prefix$randomNumber"
-        } while (eventDao.existeCodigo(candidateCode))
+        } while (!events.whereEqualTo("accessCode", candidateCode).limit(1).get().await().isEmpty)
 
         return candidateCode
     }
 
-    private fun currentDateTime(): String {
-        return SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+    private suspend fun fetch(query: Query): List<Event> = firestoreCall(emptyList()) {
+        query.get().await().documents.map { it.toEvent() }.sortedBy { it.date }
     }
+
+    companion object {
+        private const val STATUS_PUBLISHED = "PUBLISHED"
+    }
+}
+
+internal fun DocumentSnapshot.toEvent(): Event {
+    return Event(
+        id = (getLong("id") ?: 0L).toInt(),
+        creatorId = getLong("creatorId"),
+        title = getString("title").orEmpty(),
+        description = getString("description").orEmpty(),
+        date = getString("date").orEmpty(),
+        endTime = getString("endTime"),
+        location = getString("location").orEmpty(),
+        category = getString("category").orEmpty(),
+        capacity = (getLong("capacity") ?: 0L).toInt(),
+        eventType = getString("eventType") ?: "Presencial",
+        isPrivate = getBoolean("isPrivate") ?: false,
+        requireDni = getBoolean("requireDni") ?: false,
+        isUntransferable = getBoolean("isUntransferable") ?: false,
+        registeredCount = (getLong("registeredCount") ?: 0L).toInt(),
+        attendedCount = (getLong("attendedCount") ?: 0L).toInt(),
+        accessCode = getString("accessCode"),
+        latitude = getDouble("latitude"),
+        longitude = getDouble("longitude"),
+        imageUrl = getString("imageUrl")
+    )
 }
