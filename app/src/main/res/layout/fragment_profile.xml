@@ -251,7 +251,7 @@
             android:textColor="#FFFFFF"
             android:textSize="14sp"
             android:textStyle="bold"
-            app:backgroundTint="#EF4444"
+            app:backgroundTint="#2196F3"
             app:cornerRadius="12dp" />
 
     </LinearLayout>

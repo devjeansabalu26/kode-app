@@ -305,7 +305,7 @@ class EventDetailFragment : Fragment() {
         binding.btnEditEvent.setOnClickListener {
             navigateTo(R.id.eventEditFragment, EventFormFragment.editArgs(event.id))
         }
-        binding.btnOpenScanner.setOnClickListener { openQrScanner(event.id) }
+        binding.btnQuickScanBanner.setOnClickListener { openQrScanner(event.id) }
     }
 
     private fun loadAttendees(eventId: Int) {

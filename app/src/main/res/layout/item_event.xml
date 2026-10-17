@@ -50,11 +50,11 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="top|end"
                 android:layout_margin="12dp"
-                android:background="#FEE2E2"
+                android:background="#405AEF"
                 android:paddingHorizontal="10dp"
                 android:paddingVertical="4dp"
                 tools:text="Quedan 42 cupos"
-                android:textColor="#991B1B"
+                android:textColor="#FFFFFF"
                 android:textSize="11sp"
                 android:textStyle="bold" />
         </FrameLayout>
@@ -146,7 +146,7 @@
                     android:layout_height="38dp"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
-                    android:backgroundTint="#F370FF"
+                    android:backgroundTint="#7384FD"
                     android:text="Ver evento ➔"
                     android:textAllCaps="false"
                     android:textSize="12sp" />

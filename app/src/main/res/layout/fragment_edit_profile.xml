@@ -35,7 +35,7 @@
                 android:text="Editar Perfil"
                 android:textSize="22sp"
                 android:textStyle="bold"
-                android:textColor="#111827" />
+                android:textColor="#4D6AB6" />
         </LinearLayout>
 
         <TextView
@@ -147,7 +147,7 @@
             android:textColor="#FFFFFF"
             android:textSize="15sp"
             android:textStyle="bold"
-            android:backgroundTint="#111827"
+            android:backgroundTint="#165EFF"
             android:layout_marginTop="28dp"
             app:cornerRadius="12dp" />
 

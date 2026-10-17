@@ -7,6 +7,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import android.graphics.Canvas
+import android.content.ContentValues
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.zxing.BarcodeFormat
@@ -71,7 +76,62 @@ class TicketFragment : Fragment() {
         binding.btnBack.setOnClickListener { goBack() }
 
         binding.btnShareTicket.setOnClickListener {
-            Toast.makeText(requireContext(), "Preparando boleto para compartir...", Toast.LENGTH_SHORT).show()
+            downloadTicketAsImage(binding.cardTicketContainer)
+        }
+    }
+    private fun downloadTicketAsImage(view: View) {
+        try {
+
+            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            view.draw(canvas)
+
+
+            val filename = "Boleto_KODE_${System.currentTimeMillis()}.png"
+            var imageUri: android.net.Uri? = null
+            val resolver = requireContext().contentResolver
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/KODE")
+                }
+                imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+                imageUri?.let { uri ->
+                    resolver.openOutputStream(uri)?.use { outputStream ->
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                    }
+                }
+            } else {
+
+                val imagesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                val kodeDir = java.io.File(imagesDir, "KODE")
+                if (!kodeDir.exists()) kodeDir.mkdirs()
+
+                val imageFile = java.io.File(kodeDir, filename)
+                java.io.FileOutputStream(imageFile).use { outputStream ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                }
+                imageUri = android.net.Uri.fromFile(imageFile)
+
+
+                android.media.MediaScannerConnection.scanFile(
+                    requireContext(),
+                    arrayOf(imageFile.absolutePath),
+                    arrayOf("image/png"),
+                    null
+                )
+            }
+
+            if (imageUri != null) {
+                Toast.makeText(requireContext(), "¡Boleto guardado en Galeria", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(requireContext(), "Error al guardar el boleto", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 

@@ -29,7 +29,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-
+import com.google.android.material.button.MaterialButton
 
 class HomeFragment : Fragment() {
 
@@ -42,6 +42,9 @@ class HomeFragment : Fragment() {
     private var currentFilter: String = FILTER_ALL
     private var filtersJob: Job? = null
     private var eventsJob: Job? = null
+
+    private val filterButtonsMap = mutableMapOf<String, MaterialButton>()
+    private var selectedButton: Button? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -122,40 +125,79 @@ class HomeFragment : Fragment() {
         return viewLifecycleOwner.lifecycleScope.launch {
             val categories = eventRepository.getCategories()
             binding.filtersContainer.removeAllViews()
+            filterButtonsMap.clear()
 
-            addFilterButton(text = "Todos") {
+            addFilterButton(key = FILTER_ALL, text = "Todos") {
                 currentFilter = FILTER_ALL
                 applyFilters()
             }
-            addFilterButton(text = "Esta semana") {
+            addFilterButton(key = FILTER_THIS_WEEK, text = "Esta semana") {
                 currentFilter = FILTER_THIS_WEEK
                 applyFilters()
             }
 
             categories.forEach { category ->
-                addFilterButton(text = category) {
+                addFilterButton(key = category, text = category) {
                     currentFilter = category
                     applyFilters()
                 }
             }
+
+
+            filterButtonsMap[FILTER_ALL]?.let { updateSelectedButtonStyle(it) }
         }.also { filtersJob = it }
     }
 
-    private fun addFilterButton(text: String, onClick: () -> Unit) {
-        val button = Button(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle)
-        button.text = text
-        button.isAllCaps = false
-        button.textSize = 12f
+    private fun addFilterButton(key: String, text: String, onClick: () -> Unit) {
+        val button = MaterialButton(
+            requireContext(),
+            null,
+            com.google.android.material.R.attr.materialButtonOutlinedStyle
+        ).apply {
+            this.text = text
+            isAllCaps = false
+            textSize = 13f
+            insetTop = 0
+            insetBottom = 0
+            setPadding(dpToPx(16), 0, dpToPx(16), 0)
+        }
 
         val params = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
-            dpToPx(36)
+            dpToPx(42)
         )
-        params.marginEnd = dpToPx(8)
+        params.marginEnd = dpToPx(10)
         button.layoutParams = params
 
-        button.setOnClickListener { onClick() }
+        button.setOnClickListener {
+            updateSelectedButtonStyle(button)
+            onClick()
+        }
+
+        filterButtonsMap[key] = button
         binding.filtersContainer.addView(button)
+    }
+
+    private fun updateSelectedButtonStyle(activeButton: MaterialButton) {
+        val colorGrayText = android.graphics.Color.parseColor("#374151")
+        val colorBorder = android.graphics.Color.parseColor("#E5E7EB")
+        val colorWhite = android.graphics.Color.parseColor("#FFFFFF")
+        val colorBlue = android.graphics.Color.parseColor("#2563EB")
+
+        // Restaurar todos los botones a estado inactivo (borde gris, fondo blanco, texto gris)
+        filterButtonsMap.values.forEach { btn ->
+            btn.setTextColor(colorGrayText)
+            btn.backgroundTintList = android.content.res.ColorStateList.valueOf(colorWhite)
+            btn.strokeColor = android.content.res.ColorStateList.valueOf(colorBorder)
+            btn.strokeWidth = dpToPx(1)
+        }
+
+        // Aplicar estilo al botón seleccionado (fondo azul celestino sólido y letras blancas)
+        activeButton.setTextColor(colorWhite)
+        activeButton.backgroundTintList = android.content.res.ColorStateList.valueOf(colorBlue)
+        activeButton.strokeColor = android.content.res.ColorStateList.valueOf(colorBlue)
+        activeButton.strokeWidth = 0
+        selectedButton = activeButton
     }
 
     private fun applyFilters(): Job {
