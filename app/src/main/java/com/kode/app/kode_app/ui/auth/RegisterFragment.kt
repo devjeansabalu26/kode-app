@@ -20,6 +20,7 @@ import com.kode.app.kode_app.data.RegistrationRepository
 import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.core.goToTab
 import com.kode.app.kode_app.core.navigateTo
+import com.kode.app.kode_app.core.goBack
 import com.kode.app.kode_app.ui.events.TicketFragment
 import kotlinx.coroutines.launch
 class RegisterFragment :
@@ -40,6 +41,7 @@ class RegisterFragment :
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.btnBack.setOnClickListener { goBack() }
         val etName = binding.etName
         val etDni = binding.etDni
         val etPhone = binding.etPhone

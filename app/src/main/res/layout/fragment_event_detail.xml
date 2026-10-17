@@ -31,11 +31,23 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
+                    <ImageButton
+                        android:id="@+id/btnBack"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/bg_icon_button"
+                        android:contentDescription="Volver"
+                        android:src="@drawable/ic_arrow_back" />
+
                     <TextView
                         android:id="@+id/tvBadgeStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_centerVertical="true"
+                        android:layout_marginStart="12dp"
+                        android:layout_toEndOf="@id/btnBack"
                         android:background="#EFF6FF"
                         android:paddingHorizontal="10dp"
                         android:paddingVertical="4dp"
@@ -400,10 +412,21 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
+                    <ImageButton
+                        android:id="@+id/btnBackPortal"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_alignParentStart="true"
+                        android:background="@drawable/bg_icon_button"
+                        android:contentDescription="Volver"
+                        android:src="@drawable/ic_arrow_back" />
+
                     <TextView
                         android:id="@+id/tvTagPortal"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_toEndOf="@id/btnBackPortal"
                         android:text="PORTAL ORGANIZADOR"
                         android:textColor="#2563EB"
                         android:textSize="11sp"
@@ -413,6 +436,7 @@
                         android:id="@+id/tvTitleManagement"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_alignStart="@id/tvTagPortal"
                         android:layout_below="@id/tvTagPortal"
                         android:text="Gestión de Asistentes"
                         android:textColor="#111827"
@@ -423,6 +447,7 @@
                         android:id="@+id/tvEventSubtitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_alignStart="@id/tvTagPortal"
                         android:layout_below="@id/tvTitleManagement"
                         android:layout_marginTop="2dp"
                         tools:text="📅 Evento"

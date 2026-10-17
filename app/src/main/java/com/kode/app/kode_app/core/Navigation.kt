@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.fragment.app.Fragment
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
+import com.kode.app.kode_app.R
 
 fun Fragment.navigateTo(
     destinationId: Int,
@@ -29,4 +30,8 @@ fun Fragment.goToTab(tabId: Int) {
         .setLaunchSingleTop(true)
         .build()
     navController.navigate(tabId, null, options)
+}
+
+fun Fragment.goBack() {
+    if (!findNavController().navigateUp()) goToTab(R.id.nav_home)
 }

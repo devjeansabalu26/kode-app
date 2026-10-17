@@ -11,6 +11,7 @@ import com.kode.app.kode_app.R
 import com.kode.app.kode_app.databinding.FragmentProfileBinding
 import com.kode.app.kode_app.core.SessionManager
 import com.kode.app.kode_app.core.navigateTo
+import com.kode.app.kode_app.core.goBack
 import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.ui.auth.LoginFragment
 
@@ -31,6 +32,7 @@ class ProfileFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.btnBack.setOnClickListener { goBack() }
         val session = SessionManager(requireContext())
         if (!session.isLoggedIn()) {
             openLogin()

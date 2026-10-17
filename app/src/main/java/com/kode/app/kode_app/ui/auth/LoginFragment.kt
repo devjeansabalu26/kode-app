@@ -14,6 +14,7 @@ import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.databinding.FragmentLoginBinding
 import com.kode.app.kode_app.core.goToTab
 import com.kode.app.kode_app.core.navigateTo
+import com.kode.app.kode_app.core.goBack
 import com.kode.app.kode_app.ui.events.TicketFragment
 import androidx.navigation.fragment.findNavController
 import kotlinx.coroutines.launch
@@ -34,6 +35,7 @@ class LoginFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.btnBack.setOnClickListener { goBack() }
         val destination = arguments?.getString(ARG_DESTINATION) ?: ""
         val eventId = arguments?.getInt(ARG_EVENT_ID, -1) ?: -1
         val eventTitle = arguments?.getString(ARG_EVENT_TITLE)

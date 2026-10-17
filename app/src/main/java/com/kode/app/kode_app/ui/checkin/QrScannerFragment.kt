@@ -22,6 +22,7 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import com.kode.app.kode_app.R
+import com.kode.app.kode_app.core.goBack
 import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.data.RegistrationRepository
 import com.kode.app.kode_app.data.RegistrationRepository.ScanResult
@@ -62,6 +63,7 @@ class QrScannerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.btnBack.setOnClickListener { goBack() }
 
         repository = RegistrationRepository()
         cameraExecutor = Executors.newSingleThreadExecutor()

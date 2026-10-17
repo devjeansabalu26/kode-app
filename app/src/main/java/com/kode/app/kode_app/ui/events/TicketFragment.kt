@@ -9,9 +9,9 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.findNavController
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import com.kode.app.kode_app.core.goBack
 import com.kode.app.kode_app.core.SessionManager
 import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.data.RegistrationRepository
@@ -68,9 +68,7 @@ class TicketFragment : Fragment() {
             }
         }
 
-        binding.btnBack.setOnClickListener {
-            findNavController().popBackStack()
-        }
+        binding.btnBack.setOnClickListener { goBack() }
 
         binding.btnShareTicket.setOnClickListener {
             Toast.makeText(requireContext(), "Preparando boleto para compartir...", Toast.LENGTH_SHORT).show()

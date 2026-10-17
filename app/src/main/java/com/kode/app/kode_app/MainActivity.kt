@@ -19,5 +19,9 @@ class MainActivity : AppCompatActivity() {
             .findFragmentById(R.id.mainContainer) as NavHostFragment
         val navController = navHostFragment.navController
         binding.bottomNavigation.setupWithNavController(navController)
+        // Al tocar la pestaña ya seleccionada (p. ej. Inicio estando en un detalle), volver a su pantalla raíz
+        binding.bottomNavigation.setOnItemReselectedListener { item ->
+            navController.popBackStack(item.itemId, false)
+        }
     }
 }

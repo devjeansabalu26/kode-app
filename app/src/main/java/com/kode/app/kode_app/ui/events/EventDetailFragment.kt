@@ -20,6 +20,7 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.core.SessionManager
 import com.kode.app.kode_app.core.navigateTo
+import com.kode.app.kode_app.core.goBack
 import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.data.RegistrationRepository
 import com.kode.app.kode_app.databinding.FragmentEventDetailBinding
@@ -66,6 +67,8 @@ class EventDetailFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.btnBack.setOnClickListener { goBack() }
+        binding.btnBackPortal.setOnClickListener { goBack() }
 
         eventRepository = EventRepository()
         registrationRepository = RegistrationRepository()

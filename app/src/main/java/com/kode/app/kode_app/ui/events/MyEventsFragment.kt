@@ -22,6 +22,7 @@ import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.model.Event
 import com.kode.app.kode_app.core.goToTab
 import com.kode.app.kode_app.core.navigateTo
+import com.kode.app.kode_app.core.goBack
 import com.kode.app.kode_app.ui.auth.LoginFragment
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -59,6 +60,7 @@ class MyEventsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.btnBack.setOnClickListener { goBack() }
         session = SessionManager(requireContext())
         userRepository = UserRepository()
         eventRepository = EventRepository()
