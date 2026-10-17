@@ -154,14 +154,23 @@
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/btnUploadImage"
                 android:layout_width="match_parent"
-                android:layout_height="100dp"
+                android:layout_height="160dp"
                 android:layout_marginTop="4dp"
                 app:cardBackgroundColor="#F3F4F6"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp">
 
+                <ImageView
+                    android:id="@+id/ivImagePreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="Imagen del evento"
+                    android:scaleType="centerCrop"
+                    android:visibility="gone" />
+
                 <LinearLayout
+                    android:id="@+id/layoutUploadPlaceholder"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:gravity="center"
@@ -398,7 +407,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="Imagen de portada (opcional)"
+                android:text="O pega la URL de una imagen (opcional)"
                 android:textColor="#6B7280"
                 android:textSize="11sp" />
 

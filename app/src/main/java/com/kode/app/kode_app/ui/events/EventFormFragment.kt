@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -12,8 +13,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -25,12 +28,14 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
+import com.bumptech.glide.Glide
 import com.google.android.material.chip.Chip
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.core.SessionManager
 import com.kode.app.kode_app.core.goToTab
 import com.kode.app.kode_app.core.navigateTo
 import com.kode.app.kode_app.data.EventRepository
+import com.kode.app.kode_app.data.ImageRepository
 import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.databinding.FragmentEventFormBinding
 import com.kode.app.kode_app.ui.auth.LoginFragment
@@ -57,6 +62,14 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
     private var marker: Marker? = null
     private var selectedLatLng: LatLng? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    private var selectedImageUri: Uri? = null
+
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) showSelectedImage(uri)
+    }
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -110,6 +123,9 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
         binding.btnBack.setOnClickListener { navigateToHome() }
         binding.btnCancel.setOnClickListener { navigateToHome() }
         binding.btnSaveDraft.setOnClickListener { showMessage("Borrador guardado") }
+        binding.btnUploadImage.setOnClickListener {
+            pickImageLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        }
 
         setupMap()
 
@@ -157,10 +173,22 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
 
             val requireDni = binding.cbRequireDni.isChecked
             val isUntransferable = binding.cbUntransferable.isChecked
-            val imageUrl = binding.etImageUrl.text.toString()
+            val pastedImageUrl = binding.etImageUrl.text.toString()
 
             binding.btnPublish.isEnabled = false
             viewLifecycleOwner.lifecycleScope.launch {
+                val imageUri = selectedImageUri
+                val imageUrl = if (imageUri != null) {
+                    showMessage("Subiendo imagen...")
+                    ImageRepository(requireContext()).uploadEventImage(imageUri) ?: run {
+                        binding.btnPublish.isEnabled = true
+                        showMessage("No se pudo subir la imagen")
+                        return@launch
+                    }
+                } else {
+                    pastedImageUrl
+                }
+
                 val eventId = eventRepository.createEvent(
                     creatorId = creatorId,
                     title = title,
@@ -297,6 +325,13 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
                 showMessage("No se puede obtener la ubicación actual")
             }
         }
+    }
+
+    private fun showSelectedImage(uri: Uri) {
+        selectedImageUri = uri
+        binding.layoutUploadPlaceholder.isVisible = false
+        binding.ivImagePreview.isVisible = true
+        Glide.with(this).load(uri).centerCrop().into(binding.ivImagePreview)
     }
 
     private fun navigateToHome() {
