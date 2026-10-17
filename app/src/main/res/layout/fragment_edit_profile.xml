@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#FFFFFF">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+
+            <ImageButton
+                android:id="@+id/btnBackEdit"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_icon_button"
+                android:contentDescription="Volver"
+                android:src="@drawable/ic_arrow_back" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="Editar Perfil"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="#111827" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nombre completo"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:textColor="#374151"
+            android:layout_marginBottom="6dp" />
+
+        <EditText
+            android:id="@+id/etEditName"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="@drawable/bg_search_field"
+            android:inputType="textPersonName"
+            android:paddingHorizontal="16dp"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="DNI (No modificable)"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:textColor="#374151"
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="6dp" />
+
+        <EditText
+            android:id="@+id/etEditDni"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="@drawable/bg_search_field"
+            android:enabled="false"
+            android:textColor="#9CA3AF"
+            android:inputType="number"
+            android:paddingHorizontal="16dp"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Número de celular"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:textColor="#374151"
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="6dp" />
+
+        <EditText
+            android:id="@+id/etEditPhone"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="@drawable/bg_search_field"
+            android:inputType="phone"
+            android:maxLength="9"
+            android:paddingHorizontal="16dp"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Género"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:textColor="#374151"
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="6dp" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="@drawable/bg_search_field">
+
+            <Spinner
+                android:id="@+id/spEditGender"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingHorizontal="12dp" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Edad"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:textColor="#374151"
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="6dp" />
+
+        <EditText
+            android:id="@+id/etEditAge"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="@drawable/bg_search_field"
+            android:inputType="number"
+            android:maxLength="3"
+            android:paddingHorizontal="16dp"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/btnSaveProfile"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Guardar cambios"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:backgroundTint="#111827"
+            android:layout_marginTop="28dp"
+            app:cornerRadius="12dp" />
+
+    </LinearLayout>
+</ScrollView>

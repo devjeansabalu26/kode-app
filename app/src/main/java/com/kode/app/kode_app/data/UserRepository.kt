@@ -68,7 +68,18 @@ class UserRepository {
         users.document(userId.toString()).get().await()
             .takeIf { it.exists() }?.toUser()
     }
-
+    suspend fun updateUser(userId: Long, name: String, phone: String, gender: String, age: Int): Boolean = firestoreCall(false) {
+        val userDocRef = users.document(userId.toString())
+        val updates = mapOf(
+            "name" to name.trim(),
+            "phone" to phone.trim(),
+            "gender" to gender.trim(),
+            "age" to age,
+            "updatedAt" to FirestoreDb.currentDateTime()
+        )
+        userDocRef.update(updates).await()
+        true
+    }
     fun observeUser(userId: Long): LiveData<User?> {
         val userRef = users.document(userId.toString())
         return object : LiveData<User?>() {
@@ -100,4 +111,6 @@ internal fun DocumentSnapshot.toUser(): User {
         age = (getLong("age") ?: 0L).toInt(),
         email = getString("email").orEmpty()
     )
+
+
 }

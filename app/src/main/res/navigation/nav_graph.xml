@@ -40,7 +40,11 @@
         android:name="com.kode.app.kode_app.ui.auth.RegisterFragment"
         android:label="Registro"
         tools:layout="@layout/fragment_register" />
-
+    <fragment
+        android:id="@+id/editProfileFragment"
+        android:name="com.kode.app.kode_app.ui.profile.EditProfileFragment"
+        android:label="EditProfileFragment"
+        tools:layout="@layout/fragment_edit_profile" />
     <fragment
         android:id="@+id/eventEditFragment"
         android:name="com.kode.app.kode_app.ui.events.EventFormFragment"

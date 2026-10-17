@@ -4,20 +4,21 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.databinding.FragmentProfileBinding
 import com.kode.app.kode_app.core.SessionManager
 import com.kode.app.kode_app.core.navigateTo
 import com.kode.app.kode_app.core.goBack
 import com.kode.app.kode_app.data.UserRepository
+import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.ui.auth.LoginFragment
+import kotlinx.coroutines.launch
 
 class ProfileFragment : Fragment() {
     private var _binding: FragmentProfileBinding? = null
-
     private val binding get() = _binding!!
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -32,7 +33,10 @@ class ProfileFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // 1. Botón para regresar
         binding.btnBack.setOnClickListener { goBack() }
+
         val session = SessionManager(requireContext())
         if (!session.isLoggedIn()) {
             openLogin()
@@ -44,7 +48,11 @@ class ProfileFragment : Fragment() {
             openLogin()
             return
         }
+
         val userRepository = UserRepository()
+        val eventRepository = EventRepository()
+
+        // 2. Cargar y mostrar datos reales del usuario (Nombre, Email, Iniciales)
         userRepository.observeUser(userId).observe(viewLifecycleOwner) { user ->
             if (user == null) {
                 session.logout()
@@ -54,11 +62,33 @@ class ProfileFragment : Fragment() {
             }
             binding.tvProfileName.text = user.name
             binding.tvProfileEmail.text = user.email
-            binding.tvProfileDni.text = "DNI: ${user.dni}"
-            binding.tvProfilePhone.text = "Celular: ${user.phone}"
-            binding.tvProfileGender.text = "Género: ${user.gender}"
-            binding.tvProfileAge.text = "Edad: ${user.age}"
+
+            // Obtener iniciales para los avatares circulares
+            val initials = user.name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("").uppercase()
+            val finalInitials = initials.ifEmpty { "K" }
+            binding.tvProfileAvatar.text = finalInitials
+            binding.tvAvatarHeader.text = finalInitials.firstOrNull()?.toString() ?: "K"
         }
+
+        // 3. Cargar contadores reales desde Firestore (Asistidos y Creados)
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val createdEvents = eventRepository.getEventsCreatedByUser(userId)
+                val registeredEvents = eventRepository.getEventsRegisteredByUser(userId)
+
+                binding.tvCreatedCount.text = createdEvents.size.toString()
+                binding.tvAttendedCount.text = registeredEvents.size.toString()
+            } catch (e: Exception) {
+                // Manejo silencioso ante errores de conexión
+            }
+        }
+
+        // 4. Habilitar la navegación a Editar Perfil
+        binding.btnEditProfile.setOnClickListener {
+            navigateTo(R.id.editProfileFragment)
+        }
+
+        // 5. Cerrar sesión
         binding.btnLogout.setOnClickListener {
             session.logout()
             Toast.makeText(requireContext(), "Sesión cerrada", Toast.LENGTH_SHORT).show()
