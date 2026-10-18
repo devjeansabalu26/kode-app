@@ -6,7 +6,6 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.kode.app.kode_app.databinding.ActivityMainBinding
 
-
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
 
@@ -14,6 +13,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Mensaje flotante de bienvenida (UX)
+        android.widget.Toast.makeText(this, "¡Bienvenido a KODE!", android.widget.Toast.LENGTH_LONG).show()
 
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.mainContainer) as NavHostFragment
