@@ -162,6 +162,7 @@ class EventDetailFragment : Fragment() {
             }
         }
 
+        // 🟢 AQUí VA EL NUEVO LISTENER QUE PREGUNTA SI ES HÍBRIDO O SE REGISTRA DIRECTO
         binding.btnRegister.setOnClickListener {
             if (!session.isLoggedIn()) {
                 showMessage("Inicia sesión para inscribirte")
@@ -172,16 +173,43 @@ class EventDetailFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            binding.btnRegister.isEnabled = false
-            viewLifecycleOwner.lifecycleScope.launch {
-                val qrCode = registrationRepository.registerUserInEvent(event.id, session.getUserId())
-                binding.btnRegister.isEnabled = true
-                if (qrCode == null) {
-                    showMessage("No se pudo completar la inscripción")
-                    return@launch
-                }
+            if (event.eventType.equals("Híbrido", ignoreCase = true)) {
+                val options = arrayOf("Asistir Presencialmente", "Asistir Virtualmente")
+                android.app.AlertDialog.Builder(requireContext())
+                    .setTitle("Selecciona tu modalidad")
+                    .setItems(options) { _, which ->
+                        val chosenMode = if (which == 0) "Presencial" else "Virtual"
+                        registerUserInEventWithMode(event, chosenMode, alreadyRegistered)
+                    }
+                    .show()
+            } else {
+                val defaultMode = if (event.eventType.equals("Virtual", ignoreCase = true)) "Virtual" else "Presencial"
+                registerUserInEventWithMode(event, defaultMode, alreadyRegistered)
+            }
+        }
+    }
 
-                if (!alreadyRegistered) showMessage("¡Inscripción confirmada!")
+    // 🟢 FUNCIÓN AUXILIAR PARA GESTIONAR LA INSCRIPCIÓN SEGÚN LA MODALIDAD ELIGIDA
+    private fun registerUserInEventWithMode(event: Event, modality: String, alreadyRegistered: Boolean) {
+        binding.btnRegister.isEnabled = false
+        viewLifecycleOwner.lifecycleScope.launch {
+            val qrCode = registrationRepository.registerUserInEvent(event.id, session.getUserId())
+            binding.btnRegister.isEnabled = true
+            if (qrCode == null) {
+                showMessage("No se pudo completar la inscripción")
+                return@launch
+            }
+
+            if (!alreadyRegistered) showMessage("¡Inscripción confirmada ($modality)!")
+
+            if (modality == "Virtual") {
+                val args = Bundle().apply {
+                    putInt("EVENT_ID", event.id)
+                    putString("EVENT_TITLE", event.title)
+                    putString("EVENT_LOCATION", event.location)
+                }
+                navigateTo(R.id.virtualTicketFragment, args)
+            } else {
                 navigateTo(R.id.ticketFragment, TicketFragment.args(eventId = event.id, eventTitle = event.title, qrCode = qrCode))
             }
         }

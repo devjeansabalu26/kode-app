@@ -1,32 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#FFFFFF"
     android:orientation="vertical"
     android:padding="28dp">
+
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:layout_marginTop="24dp">
+        android:orientation="horizontal">
 
         <ImageButton
             android:id="@+id/btnBack"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@drawable/bg_icon_button"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Volver"
-            android:src="@drawable/ic_arrow_back" />
+            android:src="@drawable/ic_arrow_back"
+            app:tint="#111827" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:text="KODE •"
+            android:textColor="#2563EB"
             android:textSize="26sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -34,40 +38,63 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
         android:text="Inicia sesión"
+        android:textColor="#111827"
         android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_marginTop="32dp" />
+        android:textStyle="bold" />
+
 
     <EditText
         android:id="@+id/etEmail"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="50dp"
+        android:layout_marginTop="24dp"
+        android:background="#F3F4F6"
         android:hint="Correo electrónico"
         android:inputType="textEmailAddress"
-        android:layout_marginTop="24dp" />
+        android:paddingHorizontal="16dp"
+        android:textColor="#111827"
+        android:textSize="14sp" />
+
 
     <EditText
         android:id="@+id/etPassword"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="50dp"
+        android:layout_marginTop="12dp"
+        android:background="#F3F4F6"
         android:hint="Contraseña"
         android:inputType="textPassword"
-        android:layout_marginTop="12dp" />
+        android:paddingHorizontal="16dp"
+        android:textColor="#111827"
+        android:textSize="14sp" />
 
-    <Button
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnLogin"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="52dp"
+        android:layout_marginTop="24dp"
         android:text="Iniciar sesión"
-        android:layout_marginTop="24dp" />
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        app:backgroundTint="#2563EB"
+        app:cornerRadius="12dp" />
+
 
     <TextView
         android:id="@+id/tvRegister"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="¿No tienes cuenta? Regístrate aquí"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="24dp" />
+        android:layout_marginTop="24dp"
+        android:background="?attr/selectableItemBackground"
+        android:padding="8dp"
+        android:text="¿No tienes cuenta? Regístrate aquí"
+        android:textColor="#2563EB"
+        android:textSize="13sp"
+        android:textStyle="bold" />
 
 </LinearLayout>

@@ -19,7 +19,6 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
@@ -43,7 +42,7 @@
                         android:id="@+id/tvFormStep"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="PASO 1 DE 3"
+                        android:text="NUEVO EVENTO"
                         android:textColor="#2563EB"
                         android:textSize="10sp"
                         android:textStyle="bold" />
@@ -105,7 +104,6 @@
                 android:text="Categoría"
                 android:textColor="#4B5563"
                 android:textSize="12sp" />
-
 
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chipGroupCategory"
@@ -299,7 +297,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:text="3. UBICACIÓN"
+                android:text="3. MODALIDAD Y UBICACIÓN"
                 android:textColor="#374151"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -336,93 +334,164 @@
                     android:text="Híbrido" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
-            <EditText
-                android:id="@+id/etLocation"
+            <!-- Contenedor Campos Presenciales -->
+            <LinearLayout
+                android:id="@+id/layoutPresencialFields"
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
-                android:layout_marginTop="8dp"
-                android:background="#F3F4F6"
-                android:hint="Centro de Convenciones, San Borja, Lima"
-                android:paddingHorizontal="12dp"
-                android:textSize="13sp" />
-
-            <TextView
-                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="Toca el mapa para marcar el lugar exacto"
-                android:textColor="#6B7280"
-                android:textSize="11sp" />
+                android:orientation="vertical">
 
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginTop="6dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:strokeColor="#E5E7EB"
-                app:strokeWidth="1dp">
-
-                <FrameLayout
+                <EditText
+                    android:id="@+id/etLocation"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-
-                    <androidx.fragment.app.FragmentContainerView
-                        android:id="@+id/mapPicker"
-                        android:name="com.google.android.gms.maps.SupportMapFragment"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent" />
-
-                    <View
-                        android:id="@+id/mapTouchOverlay"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent" />
-                </FrameLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp">
+                    android:layout_height="44dp"
+                    android:layout_marginTop="8dp"
+                    android:background="#F3F4F6"
+                    android:hint="Dirección exacta o toca el mapa..."
+                    android:paddingHorizontal="12dp"
+                    android:textSize="13sp" />
 
                 <TextView
-                    android:id="@+id/tvSelectedCoords"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:layout_toStartOf="@id/btnMyLocation"
-                    android:text="Sin ubicación marcada"
+                    android:layout_marginTop="8dp"
+                    android:text="Toca el mapa para marcar el lugar exacto"
                     android:textColor="#6B7280"
                     android:textSize="11sp" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnMyLocation"
-                    style="@style/Widget.Material3.Button.TextButton"
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:layout_marginTop="6dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#E5E7EB"
+                    app:strokeWidth="1dp">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent">
+
+                        <androidx.fragment.app.FragmentContainerView
+                            android:id="@+id/mapPicker"
+                            android:name="com.google.android.gms.maps.SupportMapFragment"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent" />
+
+                        <View
+                            android:id="@+id/mapTouchOverlay"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent" />
+                    </FrameLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp">
+
+                    <TextView
+                        android:id="@+id/tvSelectedCoords"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_toStartOf="@id/btnMyLocation"
+                        android:text="Sin ubicación marcada"
+                        android:textColor="#6B7280"
+                        android:textSize="11sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMyLocation"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:text="📍 Mi ubicación"
+                        android:textSize="12sp" />
+                </RelativeLayout>
+            </LinearLayout>
+
+            <!-- Contenedor Campos Virtuales / Transmisión -->
+            <LinearLayout
+                android:id="@+id/layoutVirtualFields"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_alignParentEnd="true"
-                    android:text="📍 Mi ubicación"
+                    android:text="Plataforma de transmisión *"
+                    android:textColor="#4B5563"
                     android:textSize="12sp" />
-            </RelativeLayout>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="O pega la URL de una imagen (opcional)"
-                android:textColor="#6B7280"
-                android:textSize="11sp" />
+                <Spinner
+                    android:id="@+id/spPlatform"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="4dp"
+                    android:background="#F3F4F6"
+                    android:paddingHorizontal="8dp" />
 
-            <EditText
-                android:id="@+id/etImageUrl"
-                android:layout_width="match_parent"
-                android:layout_height="44dp"
-                android:layout_marginTop="6dp"
-                android:background="#F3F4F6"
-                android:hint="https://... (opcional)"
-                android:inputType="textUri"
-                android:paddingHorizontal="12dp"
-                android:textSize="13sp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Enlace de la transmisión (URL) *"
+                    android:textColor="#4B5563"
+                    android:textSize="12sp" />
+
+                <EditText
+                    android:id="@+id/etStreamUrl"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="4dp"
+                    android:background="#F3F4F6"
+                    android:hint="https://zoom.us/... o https://youtu.be/..."
+                    android:inputType="textUri"
+                    android:paddingHorizontal="12dp"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/tvMeetingPasswordLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Contraseña / ID de reunión (Opcional)"
+                    android:textColor="#4B5563"
+                    android:textSize="12sp" />
+
+                <EditText
+                    android:id="@+id/etMeetingPassword"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="4dp"
+                    android:background="#F3F4F6"
+                    android:hint="Ej: 123456"
+                    android:paddingHorizontal="12dp"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Instrucciones de acceso (Opcional)"
+                    android:textColor="#4B5563"
+                    android:textSize="12sp" />
+
+                <EditText
+                    android:id="@+id/etAccessInstructions"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginTop="4dp"
+                    android:background="#F3F4F6"
+                    android:gravity="top|start"
+                    android:hint="Ej: El enlace se habilitará 10 minutos antes de iniciar..."
+                    android:padding="8dp"
+                    android:textSize="12sp" />
+            </LinearLayout>
 
 
             <TextView
@@ -458,16 +527,22 @@
                     android:text="Público" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
+            <!-- Código de acceso automático inalterable -->
             <EditText
                 android:id="@+id/etAccessCode"
                 android:layout_width="match_parent"
                 android:layout_height="44dp"
                 android:layout_marginTop="8dp"
-                android:background="#F3F4F6"
-                android:hint="Código de acceso (Ej: 123456)"
-                android:inputType="number"
+                android:background="#E5E7EB"
+                android:clickable="false"
+                android:focusable="false"
+                android:cursorVisible="false"
+                android:focusableInTouchMode="false"
+                android:hint="Código automático generado"
                 android:paddingHorizontal="12dp"
-                android:textSize="13sp" />
+                android:textColor="#374151"
+                android:textSize="13sp"
+                android:visibility="gone" />
 
 
             <TextView
@@ -485,15 +560,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="Requerir DNI o documento en puerta"
-                android:textColor="#111827"
-                android:textSize="13sp" />
-
-            <CheckBox
-                android:id="@+id/cbUntransferable"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Pase intransferible"
                 android:textColor="#111827"
                 android:textSize="13sp" />
 

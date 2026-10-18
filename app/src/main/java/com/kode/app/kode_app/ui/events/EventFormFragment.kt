@@ -5,12 +5,16 @@ import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.pm.PackageManager
+import android.location.Geocoder
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.PickVisualMediaRequest
@@ -33,16 +37,15 @@ import com.google.android.material.chip.Chip
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.core.SessionManager
 import com.kode.app.kode_app.core.goBack
-import com.kode.app.kode_app.core.goToTab
 import com.kode.app.kode_app.core.navigateTo
 import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.data.ImageRepository
 import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.databinding.FragmentEventFormBinding
 import com.kode.app.kode_app.model.Event
-import com.kode.app.kode_app.ui.auth.LoginFragment
-import com.kode.app.kode_app.util.Constantes
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -69,6 +72,13 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
     private var editingEvent: Event? = null
     private val editEventId: Int get() = arguments?.getInt(ARG_EVENT_ID, -1) ?: -1
     private val isEditMode: Boolean get() = editEventId > 0
+
+    companion object {
+        private const val ARG_EVENT_ID = "event_id"
+        fun editArgs(eventId: Int): Bundle = Bundle().apply {
+            putInt(ARG_EVENT_ID, eventId)
+        }
+    }
 
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -103,6 +113,7 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
         session = SessionManager(requireContext())
         userRepository = UserRepository()
         eventRepository = EventRepository()
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
         if (!session.isLoggedIn()) {
             openLogin()
@@ -132,6 +143,9 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
             pickImageLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         }
 
+        setupEventTypeToggle()
+        setupVirtualPlatformSpinner()
+        setupPrivacyToggle()
         setupMap()
 
         if (isEditMode) loadEventForEdit(userId)
@@ -139,27 +153,49 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
         binding.btnPublish.setOnClickListener {
             val title = binding.etEventTitle.text.toString().trim()
             val description = binding.etEventDescription.text.toString().trim()
-            val location = binding.etLocation.text.toString().trim()
             val capacityText = binding.etCapacity.text.toString().trim()
-            val accessCode = binding.etAccessCode.text.toString().trim()
 
             val selectedChipId = binding.chipGroupCategory.checkedChipId
             if (selectedChipId == View.NO_ID) { showMessage("Selecciona una categoría"); return@setOnClickListener }
             val category = binding.root.findViewById<Chip>(selectedChipId).text.toString().replace("⚡", "").trim()
 
+            val checkedEventTypeId = binding.toggleEventType.checkedButtonId
+            val isPresencial = checkedEventTypeId == R.id.btnPresencial || checkedEventTypeId == View.NO_ID
+            val isVirtual = checkedEventTypeId == R.id.btnVirtual
+            val isHibrido = checkedEventTypeId == R.id.btnHibrido
 
-            val eventType = when (binding.toggleEventType.checkedButtonId) {
-                R.id.btnVirtual -> "Virtual"
-                R.id.btnHibrido -> "Híbrido"
+            val eventType = when {
+                isVirtual -> "Virtual"
+                isHibrido -> "Híbrido"
                 else -> "Presencial"
             }
 
+            var location = ""
+            if (isPresencial || isHibrido) {
+                location = binding.etLocation.text.toString().trim()
+                if (location.isEmpty()) { showMessage("Ingresa o marca la dirección en el mapa"); return@setOnClickListener }
+            }
+
+
+            if (isVirtual || isHibrido) {
+                val streamUrl = binding.etStreamUrl.text.toString().trim()
+                val streamPassword = binding.etMeetingPassword.text.toString().trim()
+                val streamInstructions = binding.etAccessInstructions.text.toString().trim()
+                if (streamUrl.isEmpty()) { showMessage("Ingresa el enlace de la transmisión"); return@setOnClickListener }
+
+                val platformName = binding.spPlatform.selectedItem.toString()
+                location = buildString {
+                    append("Online: $platformName | URL: $streamUrl")
+                    if (streamPassword.isNotEmpty()) append(" | Pass: $streamPassword")
+                    if (streamInstructions.isNotEmpty()) append(" | Nota: $streamInstructions")
+                }
+            }
 
             val isPrivate = binding.togglePrivacy.checkedButtonId == R.id.btnPrivado
+            // Si es privado, el repositorio genera o mantiene el código automáticamente si está vacío
 
             if (title.isEmpty()) { showMessage("Ingresa el nombre del evento"); return@setOnClickListener }
             if (description.isEmpty()) { showMessage("Ingresa una descripción"); return@setOnClickListener }
-            if (location.isEmpty()) { showMessage("Ingresa la ubicación"); return@setOnClickListener }
             if (!dateSelected) { showMessage("Selecciona la fecha"); return@setOnClickListener }
             if (!timeSelected) { showMessage("Selecciona la hora de inicio"); return@setOnClickListener }
 
@@ -180,13 +216,11 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
                 return@setOnClickListener
             }
 
-            val creatorId = session.getUserId()
+            val creatorId = session.getUserId() // Es Long según UserRepository
             val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             val databaseDate = formatter.format(selectedDateTime.time)
 
             val requireDni = binding.cbRequireDni.isChecked
-            val isUntransferable = binding.cbUntransferable.isChecked
-            val pastedImageUrl = binding.etImageUrl.text.toString()
 
             binding.btnPublish.isEnabled = false
             viewLifecycleOwner.lifecycleScope.launch {
@@ -199,7 +233,7 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
                         return@launch
                     }
                 } else {
-                    pastedImageUrl.ifBlank { editingEvent?.imageUrl.orEmpty() }
+                    editingEvent?.imageUrl.orEmpty()
                 }
 
                 val event = editingEvent
@@ -217,48 +251,238 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
                         eventType = eventType,
                         isPrivate = isPrivate,
                         requireDni = requireDni,
-                        isUntransferable = isUntransferable,
-                        latitude = selectedLatLng?.latitude,
-                        longitude = selectedLatLng?.longitude,
+                        isUntransferable = false,
+                        latitude = if (isPresencial || isHibrido) selectedLatLng?.latitude else null,
+                        longitude = if (isPresencial || isHibrido) selectedLatLng?.longitude else null,
                         imageUrl = imageUrl
                     )
                     binding.btnPublish.isEnabled = true
                     if (!saved) {
-                        showMessage("No se pudieron guardar los cambios")
+                        showMessage("No se pudo actualizar el evento")
                         return@launch
                     }
                     showMessage("Evento actualizado correctamente")
-                    goBack()
-                    return@launch
+                    closeForm()
+                } else {
+                    val eventId = eventRepository.createEvent(
+                        creatorId = creatorId,
+                        title = title,
+                        description = description,
+                        date = databaseDate,
+                        location = location,
+                        category = category,
+                        capacity = capacity,
+                        endTime = selectedEndTime,
+                        eventType = eventType,
+                        isPrivate = isPrivate,
+                        requireDni = requireDni,
+                        isUntransferable = false,
+                        accessCode = "", // El repositorio lo autogenera si isPrivate es true
+                        latitude = if (isPresencial || isHibrido) selectedLatLng?.latitude else null,
+                        longitude = if (isPresencial || isHibrido) selectedLatLng?.longitude else null,
+                        imageUrl = imageUrl
+                    )
+                    binding.btnPublish.isEnabled = true
+
+                    if (eventId == -1L) {
+                        showMessage("No se pudo crear el evento")
+                        return@launch
+                    }
+
+                    showMessage("Evento publicado correctamente")
+                    closeForm()
                 }
+            }
+        }
+    }
 
-                val eventId = eventRepository.createEvent(
-                    creatorId = creatorId,
-                    title = title,
-                    description = description,
-                    date = databaseDate,
-                    location = location,
-                    category = category,
-                    capacity = capacity,
-                    endTime = selectedEndTime,
-                    eventType = eventType,
-                    isPrivate = isPrivate,
-                    requireDni = requireDni,
-                    isUntransferable = isUntransferable,
-                    accessCode = accessCode,
-                    latitude = selectedLatLng?.latitude,
-                    longitude = selectedLatLng?.longitude,
-                    imageUrl = imageUrl
-                )
-                binding.btnPublish.isEnabled = true
-
-                if (eventId == -1L) {
-                    showMessage("No se pudo crear el evento")
-                    return@launch
+    private fun setupEventTypeToggle() {
+        binding.toggleEventType.check(R.id.btnPresencial)
+        binding.toggleEventType.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                when (checkedId) {
+                    R.id.btnPresencial -> {
+                        binding.layoutPresencialFields.visibility = View.VISIBLE
+                        binding.layoutVirtualFields.visibility = View.GONE
+                    }
+                    R.id.btnVirtual -> {
+                        binding.layoutPresencialFields.visibility = View.GONE
+                        binding.layoutVirtualFields.visibility = View.VISIBLE
+                    }
+                    R.id.btnHibrido -> {
+                        binding.layoutPresencialFields.visibility = View.VISIBLE
+                        binding.layoutVirtualFields.visibility = View.VISIBLE
+                    }
                 }
+            }
+        }
+    }
 
-                showMessage("Evento publicado correctamente")
-                navigateToHome()
+    private fun setupVirtualPlatformSpinner() {
+        val platforms = arrayOf("Zoom", "Google Meet", "YouTube Live", "Twitch", "Facebook Live", "Otro (Enlace externo)")
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, platforms)
+        binding.spPlatform.adapter = adapter
+
+        binding.spPlatform.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selected = platforms[position]
+                if (selected == "Zoom" || selected == "Google Meet") {
+                    binding.tvMeetingPasswordLabel.visibility = View.VISIBLE
+                    binding.etMeetingPassword.visibility = View.VISIBLE
+                } else {
+                    binding.tvMeetingPasswordLabel.visibility = View.GONE
+                    binding.etMeetingPassword.visibility = View.GONE
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    private fun setupPrivacyToggle() {
+        binding.togglePrivacy.check(R.id.btnPublico)
+        binding.togglePrivacy.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                if (checkedId == R.id.btnPrivado) {
+                    binding.etAccessCode.setText("(Se generará automáticamente al publicar)")
+                    binding.etAccessCode.visibility = View.VISIBLE
+                } else {
+                    binding.etAccessCode.setText("")
+                    binding.etAccessCode.visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupMap() {
+        val mapFragment = childFragmentManager.findFragmentById(R.id.mapPicker) as? SupportMapFragment
+        mapFragment?.getMapAsync(this)
+
+        binding.mapTouchOverlay.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                    binding.root.requestDisallowInterceptTouchEvent(true)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    binding.root.requestDisallowInterceptTouchEvent(false)
+                }
+            }
+            false
+        }
+
+        binding.btnMyLocation.setOnClickListener {
+            checkLocationPermission()
+        }
+    }
+
+    override fun onMapReady(googleMap: GoogleMap) {
+        map = googleMap
+        val defaultLatLng = LatLng(-16.4090, -71.5375) // Arequipa por defecto
+        map?.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLatLng, 14f))
+
+        map?.setOnMapClickListener { latLng ->
+            selectedLatLng = latLng
+            marker?.remove()
+            marker = map?.addMarker(MarkerOptions().position(latLng).title("Lugar del evento"))
+
+            val coordsText = String.format(Locale.getDefault(), "Lat: %.4f, Lng: %.4f", latLng.latitude, latLng.longitude)
+            binding.tvSelectedCoords.text = coordsText
+
+            getAddressFromCoordinates(latLng)
+        }
+    }
+
+    private fun getAddressFromCoordinates(latLng: LatLng) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val geocoder = Geocoder(requireContext(), Locale.getDefault())
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1) { addresses ->
+                        if (addresses.isNotEmpty()) {
+                            val address = addresses[0].getAddressLine(0)
+                            launch(Dispatchers.Main) {
+                                binding.etLocation.setText(address)
+                            }
+                        }
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    val addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
+                    if (!addresses.isNullOrEmpty()) {
+                        val address = addresses[0].getAddressLine(0)
+                        withContext(Dispatchers.Main) {
+                            binding.etLocation.setText(address)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Manejo silencioso si falla internet o el geocoder
+            }
+        }
+    }
+
+    private fun checkLocationPermission() {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            enableMyLocation()
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun enableMyLocation() {
+        map?.isMyLocationEnabled = true
+        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            if (location != null) {
+                val currentLatLng = LatLng(location.latitude, location.longitude)
+                map?.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 16f))
+
+                selectedLatLng = currentLatLng
+                marker?.remove()
+                marker = map?.addMarker(MarkerOptions().position(currentLatLng).title("Mi ubicación"))
+
+                binding.tvSelectedCoords.text = String.format(Locale.getDefault(), "Lat: %.4f, Lng: %.4f", currentLatLng.latitude, currentLatLng.longitude)
+                getAddressFromCoordinates(currentLatLng)
+            } else {
+                showMessage("No se pudo obtener la ubicación actual")
+            }
+        }
+    }
+
+    private fun showSelectedImage(uri: Uri) {
+        selectedImageUri = uri
+        binding.ivImagePreview.isVisible = true
+        binding.layoutUploadPlaceholder.isVisible = false
+        Glide.with(this).load(uri).centerCrop().into(binding.ivImagePreview)
+    }
+
+    private fun loadEventForEdit(userId: Long) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val event = eventRepository.getEventById(editEventId)
+            if (event == null || event.creatorId != userId) {
+                showMessage("No se pudo cargar el evento")
+                closeForm()
+                return@launch
+            }
+            editingEvent = event
+            binding.tvFormTitle.text = "Editar evento"
+            binding.etEventTitle.setText(event.title)
+            binding.etEventDescription.setText(event.description)
+            binding.etLocation.setText(event.location)
+            binding.etCapacity.setText(event.capacity.toString())
+            binding.cbRequireDni.isChecked = event.requireDni
+
+            if (event.isPrivate) {
+                binding.togglePrivacy.check(R.id.btnPrivado)
+                binding.etAccessCode.setText(event.accessCode.orEmpty())
+                binding.etAccessCode.visibility = View.VISIBLE
+            }
+
+            val imgUrl = event.imageUrl
+            if (!imgUrl.isNullOrBlank()) {
+                binding.ivImagePreview.isVisible = true
+                binding.layoutUploadPlaceholder.isVisible = false
+                Glide.with(this@EventFormFragment).load(imgUrl).centerCrop().into(binding.ivImagePreview)
             }
         }
     }
@@ -293,11 +517,9 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
                 if (isStart) {
                     selectedDateTime.set(Calendar.HOUR_OF_DAY, hour)
                     selectedDateTime.set(Calendar.MINUTE, minute)
-                    selectedDateTime.set(Calendar.SECOND, 0)
-                    selectedDateTime.set(Calendar.MILLISECOND, 0)
                     timeSelected = true
                 } else {
-                    selectedEndTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
+                    selectedEndTime = String.format(Locale.getDefault(), "%02d:%02d:00", hour, minute)
                 }
             },
             calendar.get(Calendar.HOUR_OF_DAY),
@@ -306,169 +528,15 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
         ).show()
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    private fun setupMap() {
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-        val mapFragment = childFragmentManager
-            .findFragmentById(binding.mapPicker.id) as SupportMapFragment
-        mapFragment.getMapAsync(this)
-
-        binding.mapTouchOverlay.setOnTouchListener { view, event ->
-            if (event.action == MotionEvent.ACTION_DOWN) {
-                view.parent.requestDisallowInterceptTouchEvent(true)
-            }
-            false
-        }
-
-        binding.btnMyLocation.setOnClickListener { checkLocationPermission() }
-    }
-
-    override fun onMapReady(googleMap: GoogleMap) {
-        map = googleMap
-        googleMap.uiSettings.isZoomControlsEnabled = true
-
-        val start = selectedLatLng ?: LatLng(Constantes.LIMA_LAT, Constantes.LIMA_LNG)
-        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(start, if (selectedLatLng != null) 16f else 11f))
-        selectedLatLng?.let { selectLocation(it) }
-
-        googleMap.setOnMapClickListener { latLng -> selectLocation(latLng) }
-    }
-
-    private fun selectLocation(latLng: LatLng) {
-        selectedLatLng = latLng
-        marker?.remove()
-        marker = map?.addMarker(MarkerOptions().position(latLng).title("Lugar del evento"))
-        _binding?.tvSelectedCoords?.text = String.format(
-            Locale.US, "📍 %.5f, %.5f", latLng.latitude, latLng.longitude
-        )
-    }
-
-    private fun checkLocationPermission() {
-        if (ContextCompat.checkSelfPermission(requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED) {
-            enableMyLocation()
-        } else {
-            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun enableMyLocation() {
-        val googleMap = map ?: return
-        googleMap.isMyLocationEnabled = true
-        googleMap.uiSettings.isMyLocationButtonEnabled = true
-
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            if (location != null) {
-                val currentLocation = LatLng(location.latitude, location.longitude)
-                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 16f))
-                selectLocation(currentLocation)
-            } else {
-                showMessage("No se puede obtener la ubicación actual")
-            }
-        }
-    }
-
-    private fun showSelectedImage(uri: Uri) {
-        selectedImageUri = uri
-        binding.layoutUploadPlaceholder.isVisible = false
-        binding.ivImagePreview.isVisible = true
-        Glide.with(this).load(uri).centerCrop().into(binding.ivImagePreview)
-    }
-
-    private fun loadEventForEdit(userId: Long) {
-        binding.tvFormStep.text = "MODO EDICIÓN"
-        binding.tvFormTitle.text = "Editar evento"
-        binding.btnPublish.text = "Guardar cambios"
-        binding.btnSaveDraft.isVisible = false
-        binding.btnPublish.isEnabled = false
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            val event = eventRepository.getEventById(editEventId)
-            if (event == null || event.creatorId != userId) {
-                showMessage("No puedes editar este evento")
-                goBack()
-                return@launch
-            }
-            editingEvent = event
-            fillForm(event)
-            binding.btnPublish.isEnabled = true
-        }
-    }
-
-    private fun fillForm(event: Event) {
-        binding.etEventTitle.setText(event.title)
-        binding.etEventDescription.setText(event.description)
-        binding.etLocation.setText(event.location)
-        binding.etCapacity.setText(event.capacity.toString())
-
-        listOf(binding.chipTech, binding.chipDesign, binding.chipBusiness, binding.chipMusic)
-            .firstOrNull { it.text.toString().replace("⚡", "").trim().equals(event.category.trim(), ignoreCase = true) }
-            ?.isChecked = true
-
-        binding.toggleEventType.check(
-            when (event.eventType) {
-                "Virtual" -> R.id.btnVirtual
-                "Híbrido" -> R.id.btnHibrido
-                else -> R.id.btnPresencial
-            }
-        )
-        binding.togglePrivacy.check(if (event.isPrivate) R.id.btnPrivado else R.id.btnPublico)
-        binding.etAccessCode.setText(event.accessCode.orEmpty())
-        binding.cbRequireDni.isChecked = event.requireDni
-        binding.cbUntransferable.isChecked = event.isUntransferable
-
-        runCatching { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).parse(event.date) }
-            .getOrNull()?.let { date ->
-                selectedDateTime.time = date
-                dateSelected = true
-                timeSelected = true
-                binding.etEventDate.setText(SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(date))
-                binding.etStartTime.setText(SimpleDateFormat("HH:mm", Locale.getDefault()).format(date) + " hrs")
-            }
-        event.endTime?.takeIf { it.isNotBlank() }?.let {
-            selectedEndTime = it
-            binding.etEndTime.setText("$it hrs")
-        }
-
-        event.bannerUrl()?.let { url ->
-            binding.layoutUploadPlaceholder.isVisible = false
-            binding.ivImagePreview.isVisible = true
-            Glide.with(this).load(url).centerCrop().into(binding.ivImagePreview)
-        }
-
-        if (event.latitude != null && event.longitude != null) {
-            val latLng = LatLng(event.latitude, event.longitude)
-            selectedLatLng = latLng
-            map?.let {
-                it.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
-                selectLocation(latLng)
-            }
-        }
+    private fun openLogin() {
+        navigateTo(R.id.loginFragment)
     }
 
     private fun closeForm() {
-        if (isEditMode) goBack() else navigateToHome()
-    }
-
-    private fun navigateToHome() {
-        goToTab(R.id.nav_home)
-    }
-
-    private fun openLogin() {
-        navigateTo(R.id.loginFragment, LoginFragment.args(destination = "CREATE_EVENT"), replaceCurrent = true)
+        goBack()
     }
 
     private fun showMessage(message: String) {
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-    }
-
-    companion object {
-        private const val ARG_EVENT_ID = "EVENT_ID"
-
-        fun editArgs(eventId: Int): Bundle {
-            return Bundle().apply { putInt(ARG_EVENT_ID, eventId) }
-        }
     }
 }

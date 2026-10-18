@@ -68,4 +68,9 @@
         android:name="com.kode.app.kode_app.ui.checkin.QrScannerFragment"
         android:label="Escáner QR"
         tools:layout="@layout/fragment_qr_scanner" />
+    <fragment
+        android:id="@+id/virtualTicketFragment"
+        android:name="com.kode.app.kode_app.ui.events.VirtualTicketFragment"
+        android:label="VirtualTicketFragment"
+        tools:layout="@layout/fragment_virtual_ticket" />
 </navigation>
