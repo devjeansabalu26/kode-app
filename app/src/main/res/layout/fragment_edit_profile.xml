@@ -54,7 +54,8 @@
             android:background="@drawable/bg_search_field"
             android:inputType="textPersonName"
             android:paddingHorizontal="16dp"
-            android:textSize="14sp" />
+            android:textSize="14sp"
+            android:enabled="false"/>
 
         <TextView
             android:layout_width="wrap_content"
