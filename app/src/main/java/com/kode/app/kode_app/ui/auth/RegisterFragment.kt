@@ -39,6 +39,8 @@ class RegisterFragment :
         _binding = null
     }
 
+
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.btnBack.setOnClickListener { goBack() }
@@ -55,6 +57,58 @@ class RegisterFragment :
         val genderAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, genders)
         genderAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spGender.adapter = genderAdapter
+
+        etDni.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                val dniActual = etDni.text.toString().trim()
+                if (dniActual.isNotEmpty() && dniActual.length < 8) {
+                    etDni.error = "Por favor, colocar el campo completo (8 dígitos)"
+                    showMessage("Por favor, colocar el campo completo (8 dígitos)")
+                }
+            }
+        }
+
+        etPhone.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                val phoneActual = etPhone.text.toString().trim()
+                if (phoneActual.isNotEmpty() && phoneActual.length < 9) {
+                    etPhone.error = "Por favor, colocar el campo completo (9 dígitos)"
+                    showMessage("Por favor, colocar el campo completo (9 dígitos)")
+                }
+            }
+        }
+
+        etAge.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                val ageText = etAge.text.toString().trim()
+                if (ageText.isNotEmpty()) {
+                    val age = ageText.toIntOrNull()
+                    if (age == null || age < 18) {
+                        etAge.error = "Debes ser mayor de 18 años"
+                        showMessage("Debes ser mayor de 18 años")
+                    }
+                }
+            }
+        }
+
+        etEmail.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                val email = etEmail.text.toString().trim().lowercase()
+                if (email.isNotEmpty()) {
+                    val tieneFormatoCorrecto = Patterns.EMAIL_ADDRESS.matcher(email).matches()
+
+                    val esCorreoDeConfianza = email.endsWith("@gmail.com") ||
+                            email.endsWith("@outlook.com") ||
+                            email.endsWith("@hotmail.com")
+
+                    if (!tieneFormatoCorrecto || !esCorreoDeConfianza) {
+                        etEmail.error = "Usa un correo válido y de confianza (ej. Gmail, Outlook)"
+                        showMessage("Usa un correo válido y de confianza (ej. Gmail, Outlook)")
+                    }
+                }
+            }
+        }
+
         btnRegister.setOnClickListener {
                 val name = etName.text.toString().trim()
                 val dni = etDni.text.toString().trim()
@@ -67,10 +121,13 @@ class RegisterFragment :
                     showMessage("Completa todos los campos")
                     return@setOnClickListener
                 }
-                if (dni.length != 8) {
-                    showMessage("El DNI debe tener 8 dígitos")
+                if (dni.length < 8) {
+                    showMessage("Por favor, colocar el campo completo (8 dígitos)")
                     return@setOnClickListener
-                }
+                    } else if (dni.length > 8) {
+                        showMessage("El DNI no puede tener más de 8 dígitos")
+                        return@setOnClickListener
+                        }
                 if (phone.length != 9) {
                     showMessage("El celular debe tener 9 dígitos")
                     return@setOnClickListener
