@@ -254,6 +254,17 @@
             app:backgroundTint="#2196F3"
             app:cornerRadius="12dp" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSoporte"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="16dp"
+            android:text="Comunicarse con Soporte"
+            android:textAllCaps="false"
+            app:icon="@android:drawable/ic_menu_help"
+            app:cornerRadius="14dp"
+            app:backgroundTint="#000000"/>
+
     </LinearLayout>
 
 </ScrollView>

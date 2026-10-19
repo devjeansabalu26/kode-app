@@ -16,12 +16,19 @@ import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.data.EventRepository
 import com.kode.app.kode_app.ui.auth.LoginFragment
 import kotlinx.coroutines.launch
+import android.content.Intent
+import android.net.Uri
+
 
 class ProfileFragment : Fragment() {
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentProfileBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -56,7 +63,8 @@ class ProfileFragment : Fragment() {
         userRepository.observeUser(userId).observe(viewLifecycleOwner) { user ->
             if (user == null) {
                 session.logout()
-                Toast.makeText(requireContext(), "La sesión ya no es válida", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "La sesión ya no es válida", Toast.LENGTH_SHORT)
+                    .show()
                 openLogin()
                 return@observe
             }
@@ -64,7 +72,8 @@ class ProfileFragment : Fragment() {
             binding.tvProfileEmail.text = user.email
 
             // Obtener iniciales para los avatares circulares
-            val initials = user.name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("").uppercase()
+            val initials = user.name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2)
+                .joinToString("").uppercase()
             val finalInitials = initials.ifEmpty { "K" }
             binding.tvProfileAvatar.text = finalInitials
             binding.tvAvatarHeader.text = finalInitials.firstOrNull()?.toString() ?: "K"
@@ -94,9 +103,42 @@ class ProfileFragment : Fragment() {
             Toast.makeText(requireContext(), "Sesión cerrada", Toast.LENGTH_SHORT).show()
             openLogin()
         }
+
+        binding.btnSoporte.setOnClickListener {
+            abrirSoporteCorreo()
+        }
     }
 
-    private fun openLogin() {
-        navigateTo(R.id.loginFragment, LoginFragment.args(destination = "PROFILE"), replaceCurrent = true)
+    private fun abrirSoporteCorreo() {
+        val correo = "soporte.kode@gmail.com"
+        val asunto = "Soporte KODE"
+        val mensaje = "Hola, necesito ayuda con la app KODE.\n\n"
+
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:")
+            putExtra(Intent.EXTRA_EMAIL, arrayOf(correo))
+            putExtra(Intent.EXTRA_SUBJECT, asunto)
+            putExtra(Intent.EXTRA_TEXT, mensaje)
+        }
+
+        try {
+            startActivity(Intent.createChooser(intent, "Enviar correo con"))
+        } catch (e: Exception) {
+            Toast.makeText(
+                requireContext(),
+                "No hay una app de correo instalada",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
+
+
+    private fun openLogin() {
+        navigateTo(
+            R.id.loginFragment,
+            LoginFragment.args(destination = "PROFILE"),
+            replaceCurrent = true
+        )
+    }
+
 }
