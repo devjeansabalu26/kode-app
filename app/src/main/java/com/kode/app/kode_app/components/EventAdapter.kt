@@ -7,6 +7,8 @@ import com.bumptech.glide.Glide
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.databinding.ItemEventBinding
 import com.kode.app.kode_app.model.Event
+import com.kode.app.kode_app.util.aFechaCorta
+import com.kode.app.kode_app.util.aHoraCorta
 
 class EventAdapter(
     private val events: List<Event>,
@@ -32,7 +34,7 @@ class EventAdapter(
         holder.binding.tvCategoryBadge.text = "• ${event.category}"
         holder.binding.tvEventTitle.text = event.title
         holder.binding.tvEventDescription.text = event.description
-        holder.binding.tvEventDate.text = " ${event.date}"
+        holder.binding.tvEventDate.text = " ${event.date.aFechaCorta()} · ${event.date.aHoraCorta()}"
         holder.binding.tvEventLocation.text = "${event.location}"
 
         // Aquí le indicamos que use tu banner como imagen por defecto y en caso de error

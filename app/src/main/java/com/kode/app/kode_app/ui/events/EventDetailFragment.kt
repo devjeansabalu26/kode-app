@@ -38,6 +38,8 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import com.kode.app.kode_app.util.aFechaCorta
+import com.kode.app.kode_app.util.aHoraCorta
 
 class EventDetailFragment : Fragment() {
 
@@ -110,11 +112,11 @@ class EventDetailFragment : Fragment() {
         binding.tvCategoryLabel.text = event.category.uppercase()
         binding.tvDetailTitle.text = event.title
         binding.tvDetailDescription.text = event.description
-        binding.tvDetailDate.text = " ${event.date}"
+        binding.tvDetailDate.text = " ${event.date.aFechaCorta()}"
         binding.tvDetailLocation.text = "${event.location}"
 
-        val endTimeText = if (!event.endTime.isNullOrEmpty()) " - ${event.endTime}" else ""
-        binding.tvDetailTime.text = "Horario: ${event.date}$endTimeText"
+        val endTimeText = if (!event.endTime.isNullOrEmpty()) " - ${event.endTime.aHoraCorta()}" else ""
+        binding.tvDetailTime.text = "Horario: ${event.date.aHoraCorta()}$endTimeText"
         binding.tvEventTypeBadge.text = " Modalidad: ${event.eventType ?: "Presencial"}"
 
         if (!event.accessCode.isNullOrEmpty()) {
@@ -300,7 +302,7 @@ class EventDetailFragment : Fragment() {
     }
 
     private fun setupCreatorDashboard(event: Event) {
-        binding.tvEventSubtitle.text = " ${event.title} · ${event.date}"
+        binding.tvEventSubtitle.text = " ${event.title} · ${event.date.aFechaCorta()} ${event.date.aHoraCorta()}"
 
         updateDashboardMetrics(event)
 
