@@ -43,25 +43,6 @@
                     android:textStyle="bold"
                     android:letterSpacing="0.05" />
 
-                <ImageView
-                    android:id="@+id/ivTechIcon"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:layout_toStartOf="@id/ivNotificationBell"
-                    android:layout_centerVertical="true"
-                    android:layout_marginEnd="12dp"
-                    android:src="@android:drawable/ic_menu_sort_by_size"
-                    app:tint="#D1D5DB" />
-
-                <ImageView
-                    android:id="@+id/ivNotificationBell"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:src="@android:drawable/ic_popup_reminder"
-                    app:tint="#FFFFFF" />
-
             </RelativeLayout>
 
             <LinearLayout

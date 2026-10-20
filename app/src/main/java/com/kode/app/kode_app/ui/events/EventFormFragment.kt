@@ -186,7 +186,9 @@ class EventFormFragment : Fragment() {
 
             var location = ""
             if (isPresencial || isHibrido) {
-                location = binding.etLocation.text.toString().trim()
+                location = binding.etLocation.text.toString().trim().ifEmpty {
+                    selectedLatLng?.let { String.format(Locale.getDefault(), "Lat: %.4f, Lng: %.4f", it.latitude, it.longitude) }.orEmpty()
+                }
                 if (location.isEmpty()) { showMessage("Ingresa o marca la dirección en el mapa"); return@setOnClickListener }
             }
 
@@ -426,8 +428,8 @@ class EventFormFragment : Fragment() {
                     geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1) { addresses ->
                         if (addresses.isNotEmpty()) {
                             val address = addresses[0].getAddressLine(0)
-                            launch(Dispatchers.Main) {
-                                binding.etLocation.setText(address)
+                            _binding?.etLocation?.post {
+                                _binding?.etLocation?.setText(address)
                             }
                         }
                     }
@@ -437,7 +439,7 @@ class EventFormFragment : Fragment() {
                     if (!addresses.isNullOrEmpty()) {
                         val address = addresses[0].getAddressLine(0)
                         withContext(Dispatchers.Main) {
-                            binding.etLocation.setText(address)
+                            _binding?.etLocation?.setText(address)
                         }
                     }
                 }
