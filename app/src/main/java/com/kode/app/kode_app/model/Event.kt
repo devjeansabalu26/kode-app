@@ -27,4 +27,10 @@ data class Event(
     fun hasLocation(): Boolean = latitude != null && longitude != null
 
     fun bannerUrl(): String? = imageUrl?.takeIf { it.isNotBlank() }
+
+    fun physicalAddress(): String = location.substringBefore(ONLINE_SEPARATOR)
+
+    companion object {
+        const val ONLINE_SEPARATOR = "\nOnline: "
+    }
 }

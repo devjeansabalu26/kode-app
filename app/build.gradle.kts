@@ -22,8 +22,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY", "")
     }
 
     buildTypes {
@@ -68,7 +66,7 @@ dependencies {
     implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.swiperefreshlayout)
 
-    implementation(libs.play.services.maps)
+    implementation(libs.osmdroid.android)
     implementation(libs.play.services.location)
 
     implementation(libs.androidx.activity.ktx)

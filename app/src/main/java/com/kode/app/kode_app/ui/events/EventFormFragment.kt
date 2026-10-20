@@ -25,13 +25,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.MarkerOptions
 import com.bumptech.glide.Glide
 import com.google.android.material.chip.Chip
 import com.kode.app.kode_app.R
@@ -43,14 +36,22 @@ import com.kode.app.kode_app.data.ImageRepository
 import com.kode.app.kode_app.data.UserRepository
 import com.kode.app.kode_app.databinding.FragmentEventFormBinding
 import com.kode.app.kode_app.model.Event
+import com.kode.app.kode_app.util.configurarOsm
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import org.osmdroid.events.MapEventsReceiver
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.overlay.MapEventsOverlay
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
-class EventFormFragment : Fragment(), OnMapReadyCallback {
+class EventFormFragment : Fragment() {
     private var _binding: FragmentEventFormBinding? = null
     private val binding get() = _binding!!
 
@@ -63,9 +64,9 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
     private var timeSelected = false
     private var selectedEndTime = ""
 
-    private var map: GoogleMap? = null
     private var marker: Marker? = null
-    private var selectedLatLng: LatLng? = null
+    private var myLocationOverlay: MyLocationNewOverlay? = null
+    private var selectedLatLng: GeoPoint? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     private var selectedImageUri: Uri? = null
@@ -97,14 +98,27 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        requireContext().configurarOsm()
         _binding = FragmentEventFormBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    override fun onResume() {
+        super.onResume()
+        _binding?.mapPicker?.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        _binding?.mapPicker?.onPause()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
-        map = null
+        myLocationOverlay?.disableMyLocation()
+        myLocationOverlay = null
         marker = null
+        _binding?.mapPicker?.onDetach()
         _binding = null
     }
 
@@ -185,6 +199,7 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
 
                 val platformName = binding.spPlatform.selectedItem.toString()
                 location = buildString {
+                    if (isHibrido) append(location).append("\n")
                     append("Online: $platformName | URL: $streamUrl")
                     if (streamPassword.isNotEmpty()) append(" | Pass: $streamPassword")
                     if (streamInstructions.isNotEmpty()) append(" | Nota: $streamInstructions")
@@ -355,8 +370,21 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun setupMap() {
-        val mapFragment = childFragmentManager.findFragmentById(R.id.mapPicker) as? SupportMapFragment
-        mapFragment?.getMapAsync(this)
+        val mapView = binding.mapPicker
+        mapView.setTileSource(TileSourceFactory.MAPNIK)
+        mapView.setMultiTouchControls(true)
+        mapView.controller.setZoom(14.0)
+        mapView.controller.setCenter(GeoPoint(-16.4090, -71.5375)) // Arequipa por defecto
+
+        mapView.overlays.add(MapEventsOverlay(object : MapEventsReceiver {
+            override fun singleTapConfirmedHelper(p: GeoPoint): Boolean {
+                selectLocation(p, "Lugar del evento")
+                getAddressFromCoordinates(p)
+                return true
+            }
+
+            override fun longPressHelper(p: GeoPoint): Boolean = false
+        }))
 
         binding.mapTouchOverlay.setOnTouchListener { _, event ->
             when (event.action) {
@@ -375,24 +403,22 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
-    override fun onMapReady(googleMap: GoogleMap) {
-        map = googleMap
-        val defaultLatLng = LatLng(-16.4090, -71.5375) // Arequipa por defecto
-        map?.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLatLng, 14f))
-
-        map?.setOnMapClickListener { latLng ->
-            selectedLatLng = latLng
-            marker?.remove()
-            marker = map?.addMarker(MarkerOptions().position(latLng).title("Lugar del evento"))
-
-            val coordsText = String.format(Locale.getDefault(), "Lat: %.4f, Lng: %.4f", latLng.latitude, latLng.longitude)
-            binding.tvSelectedCoords.text = coordsText
-
-            getAddressFromCoordinates(latLng)
+    private fun selectLocation(point: GeoPoint, title: String) {
+        selectedLatLng = point
+        val mapView = binding.mapPicker
+        marker?.let { mapView.overlays.remove(it) }
+        marker = Marker(mapView).apply {
+            position = point
+            this.title = title
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         }
+        mapView.overlays.add(marker)
+        mapView.invalidate()
+
+        binding.tvSelectedCoords.text = String.format(Locale.getDefault(), "Lat: %.4f, Lng: %.4f", point.latitude, point.longitude)
     }
 
-    private fun getAddressFromCoordinates(latLng: LatLng) {
+    private fun getAddressFromCoordinates(latLng: GeoPoint) {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val geocoder = Geocoder(requireContext(), Locale.getDefault())
@@ -431,17 +457,20 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
 
     @SuppressLint("MissingPermission")
     private fun enableMyLocation() {
-        map?.isMyLocationEnabled = true
+        val mapView = binding.mapPicker
+        if (myLocationOverlay == null) {
+            myLocationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(requireContext()), mapView).also {
+                it.enableMyLocation()
+                mapView.overlays.add(it)
+            }
+        }
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            if (_binding == null) return@addOnSuccessListener
             if (location != null) {
-                val currentLatLng = LatLng(location.latitude, location.longitude)
-                map?.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 16f))
+                val currentLatLng = GeoPoint(location.latitude, location.longitude)
+                binding.mapPicker.controller.animateTo(currentLatLng, 16.0, 800L)
 
-                selectedLatLng = currentLatLng
-                marker?.remove()
-                marker = map?.addMarker(MarkerOptions().position(currentLatLng).title("Mi ubicación"))
-
-                binding.tvSelectedCoords.text = String.format(Locale.getDefault(), "Lat: %.4f, Lng: %.4f", currentLatLng.latitude, currentLatLng.longitude)
+                selectLocation(currentLatLng, "Mi ubicación")
                 getAddressFromCoordinates(currentLatLng)
             } else {
                 showMessage("No se pudo obtener la ubicación actual")
@@ -468,9 +497,18 @@ class EventFormFragment : Fragment(), OnMapReadyCallback {
             binding.tvFormTitle.text = "Editar evento"
             binding.etEventTitle.setText(event.title)
             binding.etEventDescription.setText(event.description)
-            binding.etLocation.setText(event.location)
+            binding.etLocation.setText(event.physicalAddress())
             binding.etCapacity.setText(event.capacity.toString())
             binding.cbRequireDni.isChecked = event.requireDni
+
+            val lat = event.latitude
+            val lng = event.longitude
+            if (lat != null && lng != null) {
+                val point = GeoPoint(lat, lng)
+                binding.mapPicker.controller.setZoom(16.0)
+                binding.mapPicker.controller.setCenter(point)
+                selectLocation(point, "Lugar del evento")
+            }
 
             if (event.isPrivate) {
                 binding.togglePrivacy.check(R.id.btnPrivado)

@@ -14,7 +14,7 @@ swiperefreshlayout = "1.1.0"
 navigation = "2.10.2"
 retrofit = "3.0.0"
 glide = "5.0.7"
-playServicesMaps = "18.2.0"
+osmdroid = "6.1.20"
 playServicesLocation = "21.0.1"
 googleServices = "4.5.0"
 firebaseBom = "35.0.2"
@@ -38,7 +38,7 @@ androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 retrofit-converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
 glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
-play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
+osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }

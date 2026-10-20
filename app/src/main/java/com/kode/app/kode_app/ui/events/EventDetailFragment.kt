@@ -1,9 +1,14 @@
 package com.kode.app.kode_app.ui.events
 
+import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -12,11 +17,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMapOptions
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
 import com.kode.app.kode_app.R
 import com.kode.app.kode_app.core.SessionManager
 import com.kode.app.kode_app.core.navigateTo
@@ -40,6 +40,11 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 import com.kode.app.kode_app.util.aFechaCorta
 import com.kode.app.kode_app.util.aHoraCorta
+import com.kode.app.kode_app.util.configurarOsm
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.CustomZoomButtonsController
+import org.osmdroid.views.overlay.Marker
 
 class EventDetailFragment : Fragment() {
 
@@ -58,12 +63,24 @@ class EventDetailFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        requireContext().configurarOsm()
         _binding = FragmentEventDetailBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    override fun onResume() {
+        super.onResume()
+        _binding?.mapDetail?.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        _binding?.mapDetail?.onPause()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
+        _binding?.mapDetail?.onDetach()
         _binding = null
     }
 
@@ -226,22 +243,36 @@ class EventDetailFragment : Fragment() {
             .into(binding.ivDetailBanner)
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun setupMap(event: Event) {
         val lat = event.latitude ?: return
         val lng = event.longitude ?: return
-        val position = LatLng(lat, lng)
+        val position = GeoPoint(lat, lng)
 
         binding.cardDetailMap.isVisible = true
-        val mapFragment = SupportMapFragment.newInstance(
-            GoogleMapOptions().liteMode(true).mapToolbarEnabled(true)
-        )
-        childFragmentManager.beginTransaction()
-            .replace(R.id.mapDetailContainer, mapFragment)
-            .commitAllowingStateLoss()
+        val mapView = binding.mapDetail
+        mapView.setTileSource(TileSourceFactory.MAPNIK)
+        mapView.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+        mapView.controller.setZoom(16.0)
+        mapView.controller.setCenter(position)
+        mapView.overlays.add(Marker(mapView).apply {
+            this.position = position
+            title = event.physicalAddress()
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        })
 
-        mapFragment.getMapAsync { map ->
-            map.addMarker(MarkerOptions().position(position).title(event.location))
-            map.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 16f))
+        mapView.setOnTouchListener { _, motion ->
+            if (motion.action == MotionEvent.ACTION_UP) openInMapsApp(lat, lng, event.physicalAddress())
+            true
+        }
+    }
+
+    private fun openInMapsApp(lat: Double, lng: Double, label: String) {
+        val uri = Uri.parse("geo:$lat,$lng?q=$lat,$lng(${Uri.encode(label)})")
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(requireContext(), "No hay una app de mapas instalada", Toast.LENGTH_SHORT).show()
         }
     }
 
