@@ -17,7 +17,7 @@ class RegistrationRepository {
 
     suspend fun registerUserInEvent(eventId: Int, userId: Long): String? = firestoreCall(null) {
         if (eventId <= 0 || userId <= 0) return@firestoreCall null
-        if (users.getUserById(userId) == null) return@firestoreCall null
+        val user = users.getUserById(userId) ?: return@firestoreCall null
         val event = events.getEventById(eventId) ?: return@firestoreCall null
         if (event.creatorId == userId) return@firestoreCall null
 
@@ -34,12 +34,13 @@ class RegistrationRepository {
             val capacity = eventSnapshot.getLong("capacity") ?: 0L
             if (registered >= capacity) return@runTransaction null
 
+
             transaction.set(
                 registrationRef, mapOf(
                     "eventId" to eventId.toLong(),
                     "userId" to userId,
-                    "userDni" to "",
-                    "userName" to "",
+                    "userDni" to (user.dni ?: ""),
+                    "userName" to (user.name ?: ""),
                     "qrCode" to qrCode,
                     "status" to STATUS_PRE_REGISTERED,
                     "checkedIn" to false,
@@ -51,7 +52,6 @@ class RegistrationRepository {
             qrCode
         }.await()
     }
-
     suspend fun getRegistrationQr(eventId: Int, userId: Long): String? = firestoreCall(null) {
         userRegistrationRef(eventId, userId).get().await()
             .takeIf { it.exists() }?.getString("qrCode")
@@ -75,30 +75,49 @@ class RegistrationRepository {
 
     suspend fun processQrScan(eventId: Int, qrCode: String): ScanResult =
         firestoreCall(ScanResult.Error("No se pudo actualizar la asistencia.")) {
-            val registrationRef = registrations
+            val registrationQuery = registrations
                 .whereEqualTo("eventId", eventId.toLong())
                 .whereEqualTo("qrCode", qrCode)
                 .limit(1)
                 .get().await()
-                .documents.firstOrNull()?.reference
+
+            val registrationDoc = registrationQuery.documents.firstOrNull()
                 ?: return@firestoreCall ScanResult.NotFound(qrCode)
+
+            val registrationRef = registrationDoc.reference
             val eventRef = eventsRef.document(eventId.toString())
+
+            val userId = registrationDoc.getLong("userId")
+            var userName = registrationDoc.getString("userName").orEmpty()
+            var userDni = registrationDoc.getString("userDni").orEmpty()
+
+
+            if ((userName.isBlank() || userName == "Asistente") && userId != null) {
+                val user = users.getUserById(userId)
+                if (user != null) {
+                    userName = user.name ?: "Asistente"
+                    userDni = user.dni ?: ""
+                }
+            }
 
             db.runTransaction<ScanResult> { transaction ->
                 val registration = transaction.get(registrationRef)
-                val name = registration.getString("userName").orEmpty().ifEmpty { "Asistente" }
                 if (registration.getString("status") == STATUS_ATTENDED) {
-                    return@runTransaction ScanResult.AlreadyCheckedIn(name, registration.getString("checkedInAt").orEmpty())
+                    val checkedInAt = registration.getString("checkedInAt").orEmpty()
+                    return@runTransaction ScanResult.AlreadyCheckedIn(userName.ifEmpty { "Asistente" }, checkedInAt)
                 }
+
                 transaction.update(
                     registrationRef, mapOf(
                         "status" to STATUS_ATTENDED,
                         "checkedIn" to true,
-                        "checkedInAt" to FirestoreDb.currentDateTime()
+                        "checkedInAt" to FirestoreDb.currentDateTime(),
+                        "userName" to userName,
+                        "userDni" to userDni
                     )
                 )
                 transaction.update(eventRef, "attendedCount", FieldValue.increment(1))
-                ScanResult.Success(name, registration.getString("userDni").orEmpty())
+                ScanResult.Success(userName.ifEmpty { "Asistente" }, userDni)
             }.await()
         }
 

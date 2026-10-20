@@ -169,16 +169,22 @@ class QrScannerFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             when (val result = repository.processQrScan(eventId, qrCode)) {
                 is ScanResult.Success -> {
-                    showScanDialog("✅ INGRESO PERMITIDO", "Bienvenido(a): ${result.userName}\nDNI: ${result.dni}")
+                    val nombreFinal = if (!result.userName.isNullOrBlank() && result.userName != "Asistente") {
+                        result.userName
+                    } else {
+                        "Participante del Evento"
+                    }
+
+                    showScanDialog("INGRESO PERMITIDO", "Bienvenido(a): $nombreFinal\nDNI: ${result.dni}")
                 }
                 is ScanResult.AlreadyCheckedIn -> {
-                    showScanDialog("⚠️ REINGRESO DUPLICADO", "El asistente ${result.userName} ya registró su ingreso a las ${result.checkinTime}.")
+                    showScanDialog("REINGRESO DUPLICADO", "El asistente ${result.userName} ya registró su ingreso a las ${result.checkinTime}.")
                 }
                 is ScanResult.NotFound -> {
                     showNotFoundDialog(qrCode)
                 }
                 is ScanResult.Error -> {
-                    showScanDialog("❌ ERROR", result.message)
+                    showScanDialog("ERROR", result.message)
                 }
             }
             updateAttendanceMetrics()
